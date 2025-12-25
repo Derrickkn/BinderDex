@@ -268,24 +268,30 @@ export default function LandingPage() {
                 <div className="w-6 rounded-l-lg border border-r-0 border-zinc-700 bg-zinc-800/80" />
                 {/* Binder page with cards */}
                 <div className="flex-1 rounded-r-xl border border-l-0 border-zinc-800 bg-zinc-900/30 p-6">
-                  <div className="grid grid-cols-3 gap-2">
-                    {/* Color grouped cards preview */}
-                    {[...Array(3)].map((_, i) => (
+                  <div className="grid grid-cols-4 gap-2">
+                    {/* Color grouped cards preview - 4x4 grid */}
+                    {[...Array(4)].map((_, i) => (
                       <div
                         key={`pink-${i}`}
                         className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-rose-500/50 to-pink-600/50"
                       />
                     ))}
-                    {[...Array(3)].map((_, i) => (
+                    {[...Array(4)].map((_, i) => (
                       <div
                         key={`amber-${i}`}
                         className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-amber-400/50 to-orange-500/50"
                       />
                     ))}
-                    {[...Array(3)].map((_, i) => (
+                    {[...Array(4)].map((_, i) => (
                       <div
                         key={`sky-${i}`}
                         className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-sky-400/50 to-cyan-500/50"
+                      />
+                    ))}
+                    {[...Array(4)].map((_, i) => (
+                      <div
+                        key={`emerald-${i}`}
+                        className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-emerald-500/50 to-teal-600/50"
                       />
                     ))}
                   </div>
