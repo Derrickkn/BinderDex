@@ -8,23 +8,57 @@ const features = [
     title: "Card Browser",
     description:
       "Browse thousands of Pokémon cards with powerful filters. Search by set, type, rarity, and more.",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+    ),
   },
   {
     title: "Master Set Tracker",
     description:
       "Track your collection progress with a visual binder representation. See what you own vs what you need.",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+      </svg>
+    ),
   },
   {
     title: "Binder Builder",
     description:
       "Create custom binders with drag-and-drop. Organize your collection exactly how you want.",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+      </svg>
+    ),
   },
   {
     title: "ChromaDex",
     description:
       "Smart binder page generator. Create beautiful, color-coordinated layouts with one click.",
+    icon: (
+      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+      </svg>
+    ),
   },
 ];
+
+// Minimalist binder logo component
+const BinderLogo = ({ className = "h-5 w-6" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 20" fill="none">
+    {/* Binder spine/rings */}
+    <rect x="0" y="0" width="4" height="20" rx="1" fill="currentColor" opacity="0.6" />
+    <circle cx="2" cy="4" r="1.5" fill="currentColor" />
+    <circle cx="2" cy="10" r="1.5" fill="currentColor" />
+    <circle cx="2" cy="16" r="1.5" fill="currentColor" />
+    {/* Binder pages */}
+    <rect x="5" y="1" width="18" height="18" rx="1" fill="currentColor" opacity="0.3" />
+    <rect x="6" y="2" width="16" height="16" rx="1" fill="currentColor" opacity="0.5" />
+  </svg>
+);
 
 export default function LandingPage() {
   return (
@@ -32,13 +66,9 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 z-50 w-full border-b border-zinc-800 bg-[#0a0a0a]/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex gap-0.5">
-              <div className="h-4 w-2 rounded-sm bg-white" />
-              <div className="h-4 w-2 rounded-sm bg-white" />
-              <div className="h-4 w-2 rounded-sm bg-white" />
-            </div>
-            <span className="text-sm font-medium text-zinc-400">binderdex</span>
+          <Link href="/" className="flex items-center gap-2 text-white">
+            <BinderLogo className="h-5 w-6" />
+            <span className="text-sm font-medium text-zinc-400">BinderDex</span>
           </Link>
           <div className="flex items-center gap-6">
             <Link
@@ -174,6 +204,9 @@ export default function LandingPage() {
             {features.map((feature, index) => (
               <BlurFade key={index} delay={0.1 + index * 0.05} inView>
                 <div className="group">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition-colors group-hover:border-zinc-700 group-hover:text-white">
+                    {feature.icon}
+                  </div>
                   <h3 className="mb-2 text-lg font-medium text-white">
                     {feature.title}
                   </h3>
@@ -229,31 +262,43 @@ export default function LandingPage() {
             </BlurFade>
 
             <BlurFade delay={0.2} inView>
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-6">
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Color grouped cards preview */}
-                  {[...Array(3)].map((_, i) => (
-                    <div
-                      key={`pink-${i}`}
-                      className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-rose-500/50 to-pink-600/50"
-                    />
-                  ))}
-                  {[...Array(3)].map((_, i) => (
-                    <div
-                      key={`amber-${i}`}
-                      className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-amber-400/50 to-orange-500/50"
-                    />
-                  ))}
-                  {[...Array(3)].map((_, i) => (
-                    <div
-                      key={`sky-${i}`}
-                      className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-sky-400/50 to-cyan-500/50"
-                    />
-                  ))}
+              {/* Binder-shaped display */}
+              <div className="flex">
+                {/* Binder spine with rings */}
+                <div className="flex w-8 flex-col items-center justify-center rounded-l-lg border border-r-0 border-zinc-700 bg-zinc-800/80 py-6">
+                  <div className="flex flex-col gap-8">
+                    <div className="h-4 w-4 rounded-full border-2 border-zinc-500 bg-zinc-900" />
+                    <div className="h-4 w-4 rounded-full border-2 border-zinc-500 bg-zinc-900" />
+                    <div className="h-4 w-4 rounded-full border-2 border-zinc-500 bg-zinc-900" />
+                  </div>
                 </div>
-                <p className="mt-4 text-center text-xs text-zinc-500">
-                  Cards grouped by color palette
-                </p>
+                {/* Binder page with cards */}
+                <div className="flex-1 rounded-r-xl border border-l-0 border-zinc-800 bg-zinc-900/30 p-6">
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Color grouped cards preview */}
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={`pink-${i}`}
+                        className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-rose-500/50 to-pink-600/50"
+                      />
+                    ))}
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={`amber-${i}`}
+                        className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-amber-400/50 to-orange-500/50"
+                      />
+                    ))}
+                    {[...Array(3)].map((_, i) => (
+                      <div
+                        key={`sky-${i}`}
+                        className="aspect-[2.5/3.5] rounded-md bg-gradient-to-br from-sky-400/50 to-cyan-500/50"
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-4 text-center text-xs text-zinc-500">
+                    Cards grouped by color palette
+                  </p>
+                </div>
               </div>
             </BlurFade>
           </div>
@@ -367,13 +412,9 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-zinc-800 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <div className="flex gap-0.5">
-              <div className="h-3 w-1.5 rounded-sm bg-zinc-600" />
-              <div className="h-3 w-1.5 rounded-sm bg-zinc-600" />
-              <div className="h-3 w-1.5 rounded-sm bg-zinc-600" />
-            </div>
-            <span className="text-sm text-zinc-600">binderdex</span>
+          <div className="flex items-center gap-2 text-zinc-600">
+            <BinderLogo className="h-4 w-5" />
+            <span className="text-sm">BinderDex</span>
           </div>
           <p className="text-sm text-zinc-600">
             © 2025 BinderDex. All rights reserved.
