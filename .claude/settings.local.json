@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(gh auth:*)",
+      "Bash(where:*)",
+      "Bash(powershell -Command \"Get-Command gh -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(powershell -Command:*)",
+      "mcp___magicuidesign_mcp__getUIComponents",
+      "mcp___magicuidesign_mcp__getButtons",
+      "mcp___magicuidesign_mcp__getBackgrounds",
+      "mcp___magicuidesign_mcp__getTextAnimations",
+      "mcp___magicuidesign_mcp__getSpecialEffects",
+      "mcp___magicuidesign_mcp__getComponents",
+      "mcp___magicuidesign_mcp__getDeviceMocks",
+      "mcp___magicuidesign_mcp__getAnimations",
+      "mcp__supabase__list_projects",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__get_project_url",
+      "mcp__supabase__get_publishable_keys",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(npx create-next-app@14:*)",
+      "Bash(xcopy /E /H /Y \"C:\\\\binderdex-temp\\\\*\" \"C:\\\\BinderDex\"\" && rmdir /S /Q \"C:binderdex-temp \")",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(cat:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
+}
