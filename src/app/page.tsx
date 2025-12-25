@@ -203,8 +203,8 @@ export default function LandingPage() {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {features.map((feature, index) => (
               <BlurFade key={index} delay={0.1 + index * 0.05} inView>
-                <div className="group">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition-colors group-hover:border-zinc-700 group-hover:text-white">
+                <div className="group text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900/50 text-zinc-400 transition-colors group-hover:border-zinc-700 group-hover:text-white">
                     {feature.icon}
                   </div>
                   <h3 className="mb-2 text-lg font-medium text-white">
@@ -264,14 +264,8 @@ export default function LandingPage() {
             <BlurFade delay={0.2} inView>
               {/* Binder-shaped display */}
               <div className="flex">
-                {/* Binder spine with rings */}
-                <div className="flex w-8 flex-col items-center justify-center rounded-l-lg border border-r-0 border-zinc-700 bg-zinc-800/80 py-6">
-                  <div className="flex flex-col gap-8">
-                    <div className="h-4 w-4 rounded-full border-2 border-zinc-500 bg-zinc-900" />
-                    <div className="h-4 w-4 rounded-full border-2 border-zinc-500 bg-zinc-900" />
-                    <div className="h-4 w-4 rounded-full border-2 border-zinc-500 bg-zinc-900" />
-                  </div>
-                </div>
+                {/* Binder spine */}
+                <div className="w-6 rounded-l-lg border border-r-0 border-zinc-700 bg-zinc-800/80" />
                 {/* Binder page with cards */}
                 <div className="flex-1 rounded-r-xl border border-l-0 border-zinc-800 bg-zinc-900/30 p-6">
                   <div className="grid grid-cols-3 gap-2">
@@ -305,86 +299,55 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* How It Works Section */}
       <section className="py-24">
         <div className="mx-auto max-w-6xl px-6">
           <BlurFade delay={0.1} inView>
             <h2 className="mb-4 text-center text-3xl font-medium text-white">
-              Simple pricing
+              How it works
             </h2>
             <p className="mb-16 text-center text-zinc-400">
-              Free to start. Upgrade when you need more.
+              From browsing to building in four simple steps
             </p>
           </BlurFade>
 
-          <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
-            <BlurFade delay={0.15} inView>
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-8">
-                <h3 className="mb-1 text-xl font-medium text-white">Free</h3>
-                <div className="mb-4 text-4xl font-medium text-white">$0</div>
-                <p className="mb-6 text-sm text-zinc-500">
-                  For casual collectors
-                </p>
-                <ul className="mb-8 space-y-3">
-                  {[
-                    "Browse all cards",
-                    "1 Master Set Tracker",
-                    "1 Custom Binder",
-                    "3 ChromaDex layouts/month",
-                    "CSV Export",
-                  ].map((item, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center gap-3 text-sm text-zinc-300"
-                    >
-                      <span className="text-zinc-500">+</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <button className="w-full rounded-md border border-zinc-700 bg-transparent py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800">
-                  Get started
-                </button>
-              </div>
-            </BlurFade>
-
-            <BlurFade delay={0.2} inView>
-              <div className="rounded-xl border border-zinc-700 bg-zinc-900/50 p-8">
-                <div className="mb-1 flex items-center gap-2">
-                  <h3 className="text-xl font-medium text-white">Pro</h3>
-                  <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400">
-                    Popular
-                  </span>
+          <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-4">
+            {[
+              {
+                step: "01",
+                title: "Browse",
+                description: "Search thousands of cards with powerful filters by set, type, rarity, and more.",
+              },
+              {
+                step: "02",
+                title: "Track",
+                description: "Create master set trackers to see what you own vs what you need at a glance.",
+              },
+              {
+                step: "03",
+                title: "Build",
+                description: "Design custom binders with drag-and-drop. Organize your collection your way.",
+              },
+              {
+                step: "04",
+                title: "Generate",
+                description: "Use ChromaDex to auto-arrange cards by color into stunning binder layouts.",
+              },
+            ].map((item, index) => (
+              <BlurFade key={index} delay={0.1 + index * 0.05} inView>
+                <div className="text-center">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900/50 text-sm font-medium text-zinc-500">
+                    {item.step}
+                  </div>
+                  <h3 className="mb-2 text-lg font-medium text-white">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-zinc-400">
+                    {item.description}
+                  </p>
                 </div>
-                <div className="mb-4">
-                  <span className="text-4xl font-medium text-white">$4.99</span>
-                  <span className="text-zinc-500">/mo</span>
-                </div>
-                <p className="mb-6 text-sm text-zinc-500">
-                  For serious collectors
-                </p>
-                <ul className="mb-8 space-y-3">
-                  {[
-                    "Everything in Free",
-                    "Unlimited trackers & binders",
-                    "Unlimited ChromaDex",
-                    "PDF export with images",
-                    "No ads",
-                  ].map((item, index) => (
-                    <li
-                      key={index}
-                      className="flex items-center gap-3 text-sm text-zinc-300"
-                    >
-                      <span className="text-zinc-500">+</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <button className="w-full rounded-md bg-white py-2.5 text-sm font-medium text-black transition-colors hover:bg-zinc-200">
-                  Start free trial
-                </button>
-              </div>
-            </BlurFade>
+              </BlurFade>
+            ))}
           </div>
         </div>
       </section>
