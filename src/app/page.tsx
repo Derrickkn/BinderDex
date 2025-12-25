@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BlurFade } from "@/components/magicui/blur-fade";
+import { Particles } from "@/components/magicui/particles";
 import { cn } from "@/lib/utils";
 
 const features = [
@@ -10,47 +11,67 @@ const features = [
     description:
       "Browse thousands of Pokémon cards with powerful filters. Search by set, type, rarity, and more.",
     icon: "🔍",
+    color: "terracotta",
   },
   {
     title: "Master Set Tracker",
     description:
       "Track your collection progress with a visual binder representation. See what you own vs what you need.",
     icon: "📊",
+    color: "sage",
   },
   {
     title: "Binder Builder",
     description:
       "Create custom binders with drag-and-drop. Organize your collection exactly how you want.",
     icon: "📁",
+    color: "amber",
   },
   {
     title: "ChromaDex",
     description:
       "Smart binder page generator. Create beautiful, color-coordinated layouts with one click.",
     icon: "🎨",
+    color: "accent",
   },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Warm particles background */}
+      <Particles
+        className="absolute inset-0"
+        quantity={80}
+        ease={80}
+        color="#d97757"
+        size={1.2}
+      />
+
       {/* Navigation */}
-      <nav className="fixed top-0 z-50 w-full border-b border-foreground/5 bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+      <nav className="fixed top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md" style={{ borderColor: 'var(--border)' }}>
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl">🎴</span>
-            <span className="text-lg font-semibold tracking-tight">BinderDex</span>
+            <span className="text-2xl">🎴</span>
+            <span className="text-lg font-semibold tracking-tight" style={{ color: 'var(--warm-brown)' }}>
+              BinderDex
+            </span>
           </Link>
           <div className="flex items-center gap-6">
             <Link
               href="/login"
-              className="text-sm text-foreground/60 transition-colors hover:text-foreground"
+              className="text-sm transition-colors hover:opacity-80"
+              style={{ color: 'var(--warm-brown)' }}
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
+              className="rounded-full px-5 py-2.5 text-sm font-medium shadow-sm transition-all hover:shadow-md"
+              style={{
+                backgroundColor: 'var(--terracotta)',
+                color: 'var(--primary-foreground)'
+              }}
             >
               Get Started
             </Link>
@@ -59,40 +80,53 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="flex min-h-screen flex-col items-center justify-center px-6 pt-16">
-        <div className="mx-auto max-w-2xl text-center">
+      <section className="relative flex min-h-screen flex-col items-center justify-center px-6 pt-16">
+        <div className="mx-auto max-w-3xl text-center">
           <BlurFade delay={0.1}>
-            <p className="mb-4 text-sm font-medium text-foreground/50">
-              For Pokémon TCG Collectors
-            </p>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full px-4 py-2" style={{ backgroundColor: 'var(--cream)' }}>
+              <span className="text-sm font-medium" style={{ color: 'var(--warm-brown)' }}>
+                For Pokémon TCG Collectors
+              </span>
+            </div>
           </BlurFade>
 
           <BlurFade delay={0.2}>
-            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl">
-              Organize your collection
+            <h1 className="mb-6 text-5xl font-bold tracking-tight sm:text-6xl md:text-7xl">
+              <span style={{ color: 'var(--warm-brown)' }}>Your collection,</span>
               <br />
-              <span className="text-foreground/70">beautifully.</span>
+              <span className="bg-gradient-to-r from-[#d97757] to-[#e8b85f] bg-clip-text text-transparent">
+                beautifully organized
+              </span>
             </h1>
           </BlurFade>
 
           <BlurFade delay={0.3}>
-            <p className="mx-auto mb-10 max-w-lg text-foreground/60">
+            <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed" style={{ color: 'var(--warm-brown)', opacity: 0.8 }}>
               Track what you own, discover what you need, and create stunning
-              binder layouts with smart color matching.
+              binder layouts with smart color matching. A warm, friendly home
+              for your cherished collection.
             </p>
           </BlurFade>
 
           <BlurFade delay={0.4}>
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/signup"
-                className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+                className="rounded-full px-8 py-4 text-base font-medium shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+                style={{
+                  backgroundColor: 'var(--terracotta)',
+                  color: 'var(--primary-foreground)'
+                }}
               >
-                Start for free
+                Start collecting
               </Link>
               <Link
                 href="/demo"
-                className="rounded-full px-6 py-3 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+                className="rounded-full px-8 py-4 text-base font-medium transition-all hover:scale-105"
+                style={{
+                  backgroundColor: 'var(--cream)',
+                  color: 'var(--warm-brown)'
+                }}
               >
                 View demo →
               </Link>
@@ -102,26 +136,37 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-24">
-        <div className="mx-auto max-w-5xl px-6">
+      <section className="relative py-32">
+        <div className="mx-auto max-w-6xl px-6">
           <BlurFade delay={0.1} inView>
-            <h2 className="mb-4 text-center text-2xl font-semibold">
+            <h2 className="mb-4 text-center text-3xl font-bold" style={{ color: 'var(--warm-brown)' }}>
               Everything you need
             </h2>
-            <p className="mx-auto mb-16 max-w-md text-center text-foreground/60">
-              Simple tools to manage your entire collection.
+            <p className="mx-auto mb-20 max-w-xl text-center text-lg" style={{ color: 'var(--warm-brown)', opacity: 0.7 }}>
+              Simple, thoughtful tools to manage your entire collection.
             </p>
           </BlurFade>
 
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-2">
             {features.map((feature, index) => (
               <BlurFade key={index} delay={0.1 + index * 0.1} inView>
-                <div className="rounded-2xl border border-foreground/5 bg-foreground/[0.02] p-6 transition-colors hover:border-foreground/10">
-                  <div className="mb-3 text-2xl">{feature.icon}</div>
-                  <h3 className="mb-2 font-semibold">{feature.title}</h3>
-                  <p className="text-sm text-foreground/60">
-                    {feature.description}
-                  </p>
+                <div
+                  className="group relative overflow-hidden rounded-3xl p-8 shadow-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                  style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border)' }}
+                >
+                  <div className="relative z-10">
+                    <div className="mb-4 text-4xl">{feature.icon}</div>
+                    <h3 className="mb-3 text-xl font-semibold" style={{ color: 'var(--warm-brown)' }}>
+                      {feature.title}
+                    </h3>
+                    <p className="leading-relaxed" style={{ color: 'var(--warm-brown)', opacity: 0.7 }}>
+                      {feature.description}
+                    </p>
+                  </div>
+                  <div
+                    className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-5"
+                    style={{ background: `radial-gradient(circle at 50% 50%, var(--${feature.color}), transparent)` }}
+                  />
                 </div>
               </BlurFade>
             ))}
@@ -129,37 +174,47 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ChromaDex Section */}
-      <section className="border-y border-foreground/5 py-24">
-        <div className="mx-auto max-w-5xl px-6">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
+      {/* ChromaDex Showcase Section */}
+      <section className="relative border-y py-32" style={{ borderColor: 'var(--border)', backgroundColor: 'var(--cream)' }}>
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid items-center gap-16 lg:grid-cols-2">
             <BlurFade delay={0.1} inView>
               <div>
-                <p className="mb-2 text-sm font-medium text-foreground/50">
-                  Introducing
-                </p>
-                <h2 className="mb-4 text-3xl font-semibold">ChromaDex</h2>
-                <p className="mb-6 text-foreground/60">
+                <div className="mb-3 inline-block rounded-full px-4 py-1.5" style={{ backgroundColor: 'var(--background)' }}>
+                  <span className="text-sm font-medium" style={{ color: 'var(--terracotta)' }}>
+                    Introducing ChromaDex
+                  </span>
+                </div>
+                <h2 className="mb-6 text-4xl font-bold" style={{ color: 'var(--warm-brown)' }}>
+                  Color-coordinated magic
+                </h2>
+                <p className="mb-8 text-lg leading-relaxed" style={{ color: 'var(--warm-brown)', opacity: 0.8 }}>
                   Create visually stunning binder pages automatically. ChromaDex
                   analyzes your cards&apos; colors and arranges them into harmonious
                   layouts—no manual sorting required.
                 </p>
-                <ul className="mb-8 space-y-3">
+                <ul className="mb-10 space-y-4">
                   {[
-                    "Color-coordinated layouts",
+                    "Smart color extraction",
                     "Multiple arrangement styles",
                     "One-click generation",
                     "Unlimited with Pro",
                   ].map((item, index) => (
-                    <li key={index} className="flex items-center gap-3 text-sm">
-                      <span className="text-foreground/40">✓</span>
-                      <span className="text-foreground/70">{item}</span>
+                    <li key={index} className="flex items-center gap-3">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full" style={{ backgroundColor: 'var(--sage)', color: 'var(--background)' }}>
+                        <span className="text-xs">✓</span>
+                      </div>
+                      <span className="text-base" style={{ color: 'var(--warm-brown)' }}>{item}</span>
                     </li>
                   ))}
                 </ul>
                 <Link
                   href="/signup"
-                  className="inline-block rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
+                  className="inline-block rounded-full px-7 py-3.5 text-base font-medium shadow-md transition-all hover:scale-105 hover:shadow-lg"
+                  style={{
+                    backgroundColor: 'var(--terracotta)',
+                    color: 'var(--primary-foreground)'
+                  }}
                 >
                   Try ChromaDex
                 </Link>
@@ -167,21 +222,21 @@ export default function LandingPage() {
             </BlurFade>
 
             <BlurFade delay={0.2} inView>
-              <div className="rounded-2xl border border-foreground/5 bg-foreground/[0.02] p-6">
-                <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-3xl p-8 shadow-lg" style={{ backgroundColor: 'var(--card-bg)' }}>
+                <div className="grid grid-cols-3 gap-3">
                   {Array.from({ length: 9 }).map((_, i) => (
                     <div
                       key={i}
                       className={cn(
-                        "aspect-[2.5/3.5] rounded-lg",
-                        i < 3 && "bg-rose-100 dark:bg-rose-900/20",
-                        i >= 3 && i < 6 && "bg-amber-100 dark:bg-amber-900/20",
-                        i >= 6 && "bg-sky-100 dark:bg-sky-900/20"
+                        "aspect-[2.5/3.5] rounded-xl shadow-sm transition-transform hover:scale-105",
+                        i < 3 && "bg-gradient-to-br from-amber-200 to-amber-300 dark:from-amber-800 dark:to-amber-900",
+                        i >= 3 && i < 6 && "bg-gradient-to-br from-green-200 to-emerald-300 dark:from-green-800 dark:to-emerald-900",
+                        i >= 6 && "bg-gradient-to-br from-orange-200 to-red-300 dark:from-orange-800 dark:to-red-900"
                       )}
                     />
                   ))}
                 </div>
-                <p className="mt-4 text-center text-xs text-foreground/40">
+                <p className="mt-6 text-center text-sm" style={{ color: 'var(--warm-brown)', opacity: 0.6 }}>
                   Cards grouped by color palette
                 </p>
               </div>
@@ -191,26 +246,28 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-24">
-        <div className="mx-auto max-w-5xl px-6">
+      <section className="relative py-32">
+        <div className="mx-auto max-w-6xl px-6">
           <BlurFade delay={0.1} inView>
-            <h2 className="mb-4 text-center text-2xl font-semibold">
-              Simple pricing
+            <h2 className="mb-4 text-center text-3xl font-bold" style={{ color: 'var(--warm-brown)' }}>
+              Simple, honest pricing
             </h2>
-            <p className="mx-auto mb-12 max-w-md text-center text-foreground/60">
+            <p className="mx-auto mb-16 max-w-xl text-center text-lg" style={{ color: 'var(--warm-brown)', opacity: 0.7 }}>
               Free to start. Upgrade when you need more.
             </p>
           </BlurFade>
 
-          <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
+          <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
             <BlurFade delay={0.15} inView>
-              <div className="rounded-2xl border border-foreground/5 bg-foreground/[0.02] p-8">
-                <h3 className="mb-1 font-semibold">Free</h3>
-                <div className="mb-4 text-3xl font-bold">$0</div>
-                <p className="mb-6 text-sm text-foreground/50">
+              <div className="rounded-3xl p-10 shadow-sm transition-all hover:shadow-md" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border)' }}>
+                <h3 className="mb-2 text-xl font-semibold" style={{ color: 'var(--warm-brown)' }}>Free</h3>
+                <div className="mb-1">
+                  <span className="text-5xl font-bold" style={{ color: 'var(--warm-brown)' }}>$0</span>
+                </div>
+                <p className="mb-8 text-sm" style={{ color: 'var(--warm-brown)', opacity: 0.6 }}>
                   For casual collectors
                 </p>
-                <ul className="mb-8 space-y-2">
+                <ul className="mb-10 space-y-3">
                   {[
                     "Browse all cards",
                     "1 Master Set Tracker",
@@ -220,47 +277,51 @@ export default function LandingPage() {
                   ].map((item, index) => (
                     <li
                       key={index}
-                      className="flex items-center gap-2 text-sm text-foreground/70"
+                      className="flex items-center gap-3 text-base"
+                      style={{ color: 'var(--warm-brown)', opacity: 0.8 }}
                     >
-                      <span className="text-foreground/30">✓</span>
+                      <span style={{ color: 'var(--sage)' }}>✓</span>
                       {item}
                     </li>
                   ))}
                 </ul>
-                <button className="w-full rounded-full border border-foreground/10 py-2.5 text-sm font-medium transition-colors hover:bg-foreground/5">
+                <button className="w-full rounded-full py-3.5 text-base font-medium transition-all hover:scale-[1.02]" style={{ backgroundColor: 'var(--cream)', color: 'var(--warm-brown)', border: '1px solid var(--border)' }}>
                   Get started
                 </button>
               </div>
             </BlurFade>
 
             <BlurFade delay={0.2} inView>
-              <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8">
-                <h3 className="mb-1 font-semibold">Pro</h3>
-                <div className="mb-4">
-                  <span className="text-3xl font-bold">$4.99</span>
-                  <span className="text-foreground/50">/mo</span>
+              <div className="relative overflow-hidden rounded-3xl p-10 shadow-xl transition-all hover:shadow-2xl" style={{ backgroundColor: 'var(--terracotta)' }}>
+                <div className="absolute right-4 top-4 rounded-full px-3 py-1" style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)' }}>
+                  <span className="text-xs font-semibold text-white">Popular</span>
                 </div>
-                <p className="mb-6 text-sm text-foreground/50">
+                <h3 className="mb-2 text-xl font-semibold text-white">Pro</h3>
+                <div className="mb-1">
+                  <span className="text-5xl font-bold text-white">$4.99</span>
+                  <span className="ml-2 text-white opacity-70">/mo</span>
+                </div>
+                <p className="mb-8 text-sm text-white opacity-80">
                   For serious collectors
                 </p>
-                <ul className="mb-8 space-y-2">
+                <ul className="mb-10 space-y-3">
                   {[
                     "Everything in Free",
                     "Unlimited trackers & binders",
                     "Unlimited ChromaDex",
                     "PDF export with images",
-                    "No ads",
+                    "Priority support",
                   ].map((item, index) => (
                     <li
                       key={index}
-                      className="flex items-center gap-2 text-sm text-foreground/70"
+                      className="flex items-center gap-3 text-base text-white"
                     >
-                      <span className="text-foreground/30">✓</span>
+                      <span className="text-white">✓</span>
                       {item}
                     </li>
                   ))}
                 </ul>
-                <button className="w-full rounded-full bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90">
+                <button className="w-full rounded-full py-3.5 text-base font-medium transition-all hover:scale-[1.02]" style={{ backgroundColor: 'white', color: 'var(--terracotta)' }}>
                   Start free trial
                 </button>
               </div>
@@ -270,18 +331,22 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="border-t border-foreground/5 py-24">
-        <div className="mx-auto max-w-2xl px-6 text-center">
+      <section className="relative border-t py-32" style={{ borderColor: 'var(--border)' }}>
+        <div className="mx-auto max-w-3xl px-6 text-center">
           <BlurFade delay={0.1} inView>
-            <h2 className="mb-4 text-2xl font-semibold">
+            <h2 className="mb-6 text-4xl font-bold" style={{ color: 'var(--warm-brown)' }}>
               Ready to organize your collection?
             </h2>
-            <p className="mb-8 text-foreground/60">
-              Join collectors already using BinderDex.
+            <p className="mb-10 text-lg" style={{ color: 'var(--warm-brown)', opacity: 0.7 }}>
+              Join collectors already using BinderDex to preserve their memories.
             </p>
             <Link
               href="/signup"
-              className="inline-block rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+              className="inline-block rounded-full px-10 py-4 text-base font-medium shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+              style={{
+                backgroundColor: 'var(--terracotta)',
+                color: 'var(--primary-foreground)'
+              }}
             >
               Get started for free
             </Link>
@@ -290,14 +355,14 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-foreground/5 py-8">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6">
+      <footer className="relative border-t py-12" style={{ borderColor: 'var(--border)' }}>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🎴</span>
-            <span className="text-sm font-medium">BinderDex</span>
+            <span className="text-2xl">🎴</span>
+            <span className="font-medium" style={{ color: 'var(--warm-brown)' }}>BinderDex</span>
           </div>
-          <p className="text-xs text-foreground/40">
-            © 2025 BinderDex. All rights reserved.
+          <p className="text-sm" style={{ color: 'var(--warm-brown)', opacity: 0.5 }}>
+            © 2025 BinderDex. Made with care for collectors.
           </p>
         </div>
       </footer>

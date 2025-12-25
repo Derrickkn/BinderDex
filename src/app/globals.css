@@ -3,18 +3,34 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
+  --background: #fef9f3;
+  --foreground: #3a2e2a;
+  --primary: #d97757;
+  --primary-foreground: #fef9f3;
+  --accent: #f4a261;
+  --sage: #8b9a7e;
+  --cream: #f9f5ec;
+  --terracotta: #d97757;
+  --amber: #e8b85f;
+  --warm-brown: #6b5347;
+  --border: rgba(107, 83, 71, 0.15);
+  --card-bg: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --primary: #60a5fa;
-    --primary-foreground: #0a0a0a;
+    --background: #2a2119;
+    --foreground: #f5e8dd;
+    --primary: #e89a77;
+    --primary-foreground: #2a2119;
+    --accent: #f4a261;
+    --sage: #9fae8f;
+    --cream: #3a3128;
+    --terracotta: #d97757;
+    --amber: #e8b85f;
+    --warm-brown: #8b6f5f;
+    --border: rgba(245, 232, 221, 0.15);
+    --card-bg: #3a3128;
   }
 }
 
@@ -28,6 +44,14 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .warm-gradient {
+    background: linear-gradient(135deg, var(--terracotta), var(--amber));
+  }
+
+  .sage-gradient {
+    background: linear-gradient(135deg, var(--sage), var(--accent));
   }
 }
 
