@@ -1,10 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShimmerButton } from "@/components/magicui/shimmer-button";
-import { AnimatedGradientText } from "@/components/magicui/animated-gradient-text";
-import { DotPattern } from "@/components/magicui/dot-pattern";
-import { BorderBeam } from "@/components/magicui/border-beam";
+import { BlurFade } from "@/components/magicui/blur-fade";
 import { cn } from "@/lib/utils";
 
 const features = [
@@ -29,349 +26,279 @@ const features = [
   {
     title: "ChromaDex",
     description:
-      "AI-powered binder page generator. Create beautiful, color-coordinated layouts automatically.",
-    icon: "✨",
+      "Smart binder page generator. Create beautiful, color-coordinated layouts with one click.",
+    icon: "🎨",
   },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Background Pattern */}
-      <DotPattern
-        className="absolute inset-0 -z-10 opacity-50 [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)]"
-        width={20}
-        height={20}
-        cx={1}
-        cy={1}
-        cr={1}
-      />
-
+    <div className="relative min-h-screen">
       {/* Navigation */}
-      <nav className="fixed top-0 z-50 w-full border-b border-foreground/10 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🎴</span>
-            <span className="text-xl font-bold">BinderDex</span>
-          </div>
-          <div className="flex items-center gap-4">
+      <nav className="fixed top-0 z-50 w-full border-b border-foreground/5 bg-background/80 backdrop-blur-sm">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-xl">🎴</span>
+            <span className="text-lg font-semibold tracking-tight">BinderDex</span>
+          </Link>
+          <div className="flex items-center gap-6">
             <Link
               href="/login"
-              className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+              className="text-sm text-foreground/60 transition-colors hover:text-foreground"
             >
               Log in
             </Link>
-            <ShimmerButton
-              className="h-9 px-4 text-sm"
-              shimmerColor="#ffffff"
-              background="linear-gradient(135deg, #3b82f6, #8b5cf6)"
+            <Link
+              href="/signup"
+              className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
             >
               Get Started
-            </ShimmerButton>
+            </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative flex min-h-screen flex-col items-center justify-center px-4 pt-16">
-        <div className="mx-auto max-w-4xl text-center">
-          {/* Badge */}
-          <div className="mb-8 inline-flex items-center rounded-full border border-foreground/10 bg-foreground/5 px-4 py-1.5">
-            <span className="mr-2">✨</span>
-            <AnimatedGradientText
-              colorFrom="#3b82f6"
-              colorTo="#8b5cf6"
-              className="text-sm font-medium"
-            >
-              Powered by ChromaDex AI
-            </AnimatedGradientText>
-          </div>
+      <section className="flex min-h-screen flex-col items-center justify-center px-6 pt-16">
+        <div className="mx-auto max-w-2xl text-center">
+          <BlurFade delay={0.1}>
+            <p className="mb-4 text-sm font-medium text-foreground/50">
+              For Pokémon TCG Collectors
+            </p>
+          </BlurFade>
 
-          {/* Main Heading */}
-          <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-            Your Pokémon TCG
-            <br />
-            <AnimatedGradientText
-              colorFrom="#3b82f6"
-              colorTo="#8b5cf6"
-              className="text-4xl font-bold sm:text-5xl md:text-6xl lg:text-7xl"
-            >
-              Collection Manager
-            </AnimatedGradientText>
-          </h1>
+          <BlurFade delay={0.2}>
+            <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl">
+              Organize your collection
+              <br />
+              <span className="text-foreground/70">beautifully.</span>
+            </h1>
+          </BlurFade>
 
-          {/* Subheading */}
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-foreground/70 sm:text-xl">
-            Track, organize, and showcase your Pokémon card collection with
-            AI-powered binder layouts. The ultimate tool for collectors.
-          </p>
+          <BlurFade delay={0.3}>
+            <p className="mx-auto mb-10 max-w-lg text-foreground/60">
+              Track what you own, discover what you need, and create stunning
+              binder layouts with smart color matching.
+            </p>
+          </BlurFade>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <ShimmerButton
-              className="h-12 px-8 text-base font-medium"
-              shimmerColor="#ffffff"
-              background="linear-gradient(135deg, #3b82f6, #8b5cf6)"
-            >
-              Start Collecting Free
-            </ShimmerButton>
-            <button className="flex h-12 items-center gap-2 rounded-full border border-foreground/20 bg-background px-8 text-base font-medium transition-colors hover:bg-foreground/5">
-              <span>Watch Demo</span>
-              <span>▶</span>
-            </button>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-16 grid grid-cols-3 gap-8 border-t border-foreground/10 pt-8">
-            <div>
-              <div className="text-3xl font-bold text-foreground">10,000+</div>
-              <div className="text-sm text-foreground/60">Cards Indexed</div>
+          <BlurFade delay={0.4}>
+            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link
+                href="/signup"
+                className="rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+              >
+                Start for free
+              </Link>
+              <Link
+                href="/demo"
+                className="rounded-full px-6 py-3 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+              >
+                View demo →
+              </Link>
             </div>
-            <div>
-              <div className="text-3xl font-bold text-foreground">50+</div>
-              <div className="text-sm text-foreground/60">Sets Available</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-foreground">Free</div>
-              <div className="text-sm text-foreground/60">To Get Started</div>
-            </div>
-          </div>
+          </BlurFade>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="relative py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-              Everything You Need to{" "}
-              <AnimatedGradientText colorFrom="#3b82f6" colorTo="#8b5cf6">
-                Manage Your Collection
-              </AnimatedGradientText>
+      <section className="py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <BlurFade delay={0.1} inView>
+            <h2 className="mb-4 text-center text-2xl font-semibold">
+              Everything you need
             </h2>
-            <p className="mx-auto mb-16 max-w-2xl text-foreground/70">
-              From browsing cards to creating stunning binder layouts, BinderDex
-              has all the tools you need.
+            <p className="mx-auto mb-16 max-w-md text-center text-foreground/60">
+              Simple tools to manage your entire collection.
             </p>
-          </div>
+          </BlurFade>
 
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2">
             {features.map((feature, index) => (
-              <div
-                key={index}
-                className="group relative overflow-hidden rounded-2xl border border-foreground/10 bg-background p-6 transition-all hover:border-foreground/20 hover:shadow-lg"
-              >
-                <BorderBeam
-                  size={150}
-                  duration={12}
-                  delay={index * 2}
-                  colorFrom="#3b82f6"
-                  colorTo="#8b5cf6"
-                  className="opacity-0 transition-opacity group-hover:opacity-100"
-                />
-                <div className="mb-4 text-4xl">{feature.icon}</div>
-                <h3 className="mb-2 text-lg font-semibold">{feature.title}</h3>
-                <p className="text-sm text-foreground/60">
-                  {feature.description}
-                </p>
-              </div>
+              <BlurFade key={index} delay={0.1 + index * 0.1} inView>
+                <div className="rounded-2xl border border-foreground/5 bg-foreground/[0.02] p-6 transition-colors hover:border-foreground/10">
+                  <div className="mb-3 text-2xl">{feature.icon}</div>
+                  <h3 className="mb-2 font-semibold">{feature.title}</h3>
+                  <p className="text-sm text-foreground/60">
+                    {feature.description}
+                  </p>
+                </div>
+              </BlurFade>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ChromaDex Highlight Section */}
-      <section className="relative overflow-hidden py-24">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-purple-500/10" />
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* ChromaDex Section */}
+      <section className="border-y border-foreground/5 py-24">
+        <div className="mx-auto max-w-5xl px-6">
           <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div>
-              <div className="mb-4 inline-flex items-center rounded-full border border-foreground/10 bg-foreground/5 px-3 py-1 text-sm">
-                <span className="mr-2">🤖</span>
-                AI-Powered
-              </div>
-              <h2 className="mb-6 text-3xl font-bold sm:text-4xl">
-                Meet{" "}
-                <AnimatedGradientText
-                  colorFrom="#3b82f6"
-                  colorTo="#8b5cf6"
-                  className="text-3xl font-bold sm:text-4xl"
+            <BlurFade delay={0.1} inView>
+              <div>
+                <p className="mb-2 text-sm font-medium text-foreground/50">
+                  Introducing
+                </p>
+                <h2 className="mb-4 text-3xl font-semibold">ChromaDex</h2>
+                <p className="mb-6 text-foreground/60">
+                  Create visually stunning binder pages automatically. ChromaDex
+                  analyzes your cards&apos; colors and arranges them into harmonious
+                  layouts—no manual sorting required.
+                </p>
+                <ul className="mb-8 space-y-3">
+                  {[
+                    "Color-coordinated layouts",
+                    "Multiple arrangement styles",
+                    "One-click generation",
+                    "Unlimited with Pro",
+                  ].map((item, index) => (
+                    <li key={index} className="flex items-center gap-3 text-sm">
+                      <span className="text-foreground/40">✓</span>
+                      <span className="text-foreground/70">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/signup"
+                  className="inline-block rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
                 >
-                  ChromaDex
-                </AnimatedGradientText>
-              </h2>
-              <p className="mb-6 text-lg text-foreground/70">
-                Our AI analyzes your cards&apos; colors, themes, and artwork to
-                create stunning binder pages. Choose from color harmony, thematic
-                grouping, or let the AI decide the perfect layout.
-              </p>
-              <ul className="mb-8 space-y-3">
-                {[
-                  "Color-coordinated layouts",
-                  "Theme-based organization",
-                  "One-click generation",
-                  "Unlimited with Pro",
-                ].map((item, index) => (
-                  <li key={index} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/20 text-xs text-primary">
-                      ✓
-                    </span>
-                    <span className="text-foreground/80">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <ShimmerButton
-                className="h-11 px-6"
-                shimmerColor="#ffffff"
-                background="linear-gradient(135deg, #3b82f6, #8b5cf6)"
-              >
-                Try ChromaDex Free
-              </ShimmerButton>
-            </div>
-            <div className="relative">
-              <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-gradient-to-br from-foreground/5 to-foreground/10 p-8">
-                <BorderBeam
-                  size={200}
-                  duration={10}
-                  colorFrom="#3b82f6"
-                  colorTo="#8b5cf6"
-                />
-                {/* Placeholder for ChromaDex preview */}
-                <div className="grid grid-cols-3 gap-3">
+                  Try ChromaDex
+                </Link>
+              </div>
+            </BlurFade>
+
+            <BlurFade delay={0.2} inView>
+              <div className="rounded-2xl border border-foreground/5 bg-foreground/[0.02] p-6">
+                <div className="grid grid-cols-3 gap-2">
                   {Array.from({ length: 9 }).map((_, i) => (
                     <div
                       key={i}
                       className={cn(
                         "aspect-[2.5/3.5] rounded-lg",
-                        i % 3 === 0 && "bg-blue-500/30",
-                        i % 3 === 1 && "bg-purple-500/30",
-                        i % 3 === 2 && "bg-pink-500/30"
+                        i < 3 && "bg-rose-100 dark:bg-rose-900/20",
+                        i >= 3 && i < 6 && "bg-amber-100 dark:bg-amber-900/20",
+                        i >= 6 && "bg-sky-100 dark:bg-sky-900/20"
                       )}
                     />
                   ))}
                 </div>
-                <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-sm">
-                  <span className="text-lg font-medium">Preview Coming Soon</span>
-                </div>
+                <p className="mt-4 text-center text-xs text-foreground/40">
+                  Cards grouped by color palette
+                </p>
               </div>
-            </div>
+            </BlurFade>
           </div>
         </div>
       </section>
 
-      {/* Pricing Teaser */}
+      {/* Pricing Section */}
       <section className="py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="mb-4 text-3xl font-bold sm:text-4xl">
-              Simple, Transparent Pricing
+        <div className="mx-auto max-w-5xl px-6">
+          <BlurFade delay={0.1} inView>
+            <h2 className="mb-4 text-center text-2xl font-semibold">
+              Simple pricing
             </h2>
-            <p className="mx-auto mb-12 max-w-2xl text-foreground/70">
-              Start for free, upgrade when you need more power.
+            <p className="mx-auto mb-12 max-w-md text-center text-foreground/60">
+              Free to start. Upgrade when you need more.
             </p>
-          </div>
+          </BlurFade>
 
-          <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
-            {/* Free Tier */}
-            <div className="rounded-2xl border border-foreground/10 bg-background p-8">
-              <h3 className="mb-2 text-xl font-semibold">Free</h3>
-              <div className="mb-4 text-4xl font-bold">$0</div>
-              <p className="mb-6 text-foreground/60">
-                Perfect for getting started
-              </p>
-              <ul className="mb-8 space-y-3">
-                {[
-                  "Browse all cards",
-                  "1 Master Set Tracker",
-                  "1 Custom Binder (10 pages)",
-                  "3 ChromaDex generations/month",
-                  "CSV Export",
-                ].map((item, index) => (
-                  <li key={index} className="flex items-center gap-3 text-sm">
-                    <span className="text-primary">✓</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full rounded-full border border-foreground/20 py-3 font-medium transition-colors hover:bg-foreground/5">
-                Get Started Free
-              </button>
-            </div>
-
-            {/* Pro Tier */}
-            <div className="relative overflow-hidden rounded-2xl border-2 border-primary bg-background p-8">
-              <BorderBeam
-                size={200}
-                duration={12}
-                colorFrom="#3b82f6"
-                colorTo="#8b5cf6"
-              />
-              <div className="absolute -right-12 -top-12 h-24 w-24 rounded-full bg-primary/20 blur-2xl" />
-              <h3 className="mb-2 text-xl font-semibold">Pro</h3>
-              <div className="mb-4">
-                <span className="text-4xl font-bold">$4.99</span>
-                <span className="text-foreground/60">/month</span>
+          <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
+            <BlurFade delay={0.15} inView>
+              <div className="rounded-2xl border border-foreground/5 bg-foreground/[0.02] p-8">
+                <h3 className="mb-1 font-semibold">Free</h3>
+                <div className="mb-4 text-3xl font-bold">$0</div>
+                <p className="mb-6 text-sm text-foreground/50">
+                  For casual collectors
+                </p>
+                <ul className="mb-8 space-y-2">
+                  {[
+                    "Browse all cards",
+                    "1 Master Set Tracker",
+                    "1 Custom Binder",
+                    "3 ChromaDex layouts/month",
+                    "CSV Export",
+                  ].map((item, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center gap-2 text-sm text-foreground/70"
+                    >
+                      <span className="text-foreground/30">✓</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <button className="w-full rounded-full border border-foreground/10 py-2.5 text-sm font-medium transition-colors hover:bg-foreground/5">
+                  Get started
+                </button>
               </div>
-              <p className="mb-6 text-foreground/60">For serious collectors</p>
-              <ul className="mb-8 space-y-3">
-                {[
-                  "Everything in Free",
-                  "Unlimited Master Set Trackers",
-                  "Unlimited Custom Binders",
-                  "Unlimited ChromaDex",
-                  "PDF Export with images",
-                  "No ads",
-                ].map((item, index) => (
-                  <li key={index} className="flex items-center gap-3 text-sm">
-                    <span className="text-primary">✓</span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <ShimmerButton
-                className="w-full py-3"
-                shimmerColor="#ffffff"
-                background="linear-gradient(135deg, #3b82f6, #8b5cf6)"
-              >
-                Start Pro Trial
-              </ShimmerButton>
-            </div>
+            </BlurFade>
+
+            <BlurFade delay={0.2} inView>
+              <div className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8">
+                <h3 className="mb-1 font-semibold">Pro</h3>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold">$4.99</span>
+                  <span className="text-foreground/50">/mo</span>
+                </div>
+                <p className="mb-6 text-sm text-foreground/50">
+                  For serious collectors
+                </p>
+                <ul className="mb-8 space-y-2">
+                  {[
+                    "Everything in Free",
+                    "Unlimited trackers & binders",
+                    "Unlimited ChromaDex",
+                    "PDF export with images",
+                    "No ads",
+                  ].map((item, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center gap-2 text-sm text-foreground/70"
+                    >
+                      <span className="text-foreground/30">✓</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <button className="w-full rounded-full bg-foreground py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90">
+                  Start free trial
+                </button>
+              </div>
+            </BlurFade>
           </div>
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <section className="border-t border-foreground/10 py-24">
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="mb-6 text-3xl font-bold sm:text-4xl">
-            Ready to Organize Your Collection?
-          </h2>
-          <p className="mx-auto mb-10 max-w-2xl text-lg text-foreground/70">
-            Join collectors who are already using BinderDex to manage and
-            showcase their Pokémon card collections.
-          </p>
-          <ShimmerButton
-            className="h-14 px-10 text-lg font-medium"
-            shimmerColor="#ffffff"
-            background="linear-gradient(135deg, #3b82f6, #8b5cf6)"
-          >
-            Get Started for Free
-          </ShimmerButton>
+      {/* Final CTA */}
+      <section className="border-t border-foreground/5 py-24">
+        <div className="mx-auto max-w-2xl px-6 text-center">
+          <BlurFade delay={0.1} inView>
+            <h2 className="mb-4 text-2xl font-semibold">
+              Ready to organize your collection?
+            </h2>
+            <p className="mb-8 text-foreground/60">
+              Join collectors already using BinderDex.
+            </p>
+            <Link
+              href="/signup"
+              className="inline-block rounded-full bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
+            >
+              Get started for free
+            </Link>
+          </BlurFade>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-foreground/10 py-12">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🎴</span>
-              <span className="font-semibold">BinderDex</span>
-            </div>
-            <p className="text-sm text-foreground/60">
-              © 2025 BinderDex. All rights reserved.
-            </p>
+      <footer className="border-t border-foreground/5 py-8">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🎴</span>
+            <span className="text-sm font-medium">BinderDex</span>
           </div>
+          <p className="text-xs text-foreground/40">
+            © 2025 BinderDex. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

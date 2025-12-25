@@ -2,7 +2,7 @@
 
 ## Overview
 
-BinderDex is a Pokémon TCG collection management web application. The flagship feature is **ChromaDex**, an AI-powered binder page generator that creates aesthetically cohesive layouts based on color analysis and thematic tagging.
+BinderDex is a Pokémon TCG collection management web application. The flagship feature is **ChromaDex**, a smart binder page generator that creates aesthetically cohesive layouts based on pre-computed color analysis.
 
 **Status**: In Development (Solo developer + Claude Code)
 
@@ -13,7 +13,6 @@ When the user reports an error, bug, or unexpected behavior in the application, 
 - Failed API calls or database queries
 - Supabase/RLS issues
 - Stripe integration problems
-- Claude API failures
 - UI rendering bugs
 - Filter system issues
 - Drag-and-drop problems
@@ -34,7 +33,6 @@ The bug-fixer agent has full context of the BinderDex architecture and can trace
 | Storage | Supabase Storage | Card images, exports |
 | Hosting | Vercel | Preview deployments on PRs |
 | Payments | Stripe | Subscriptions + webhooks |
-| AI | Claude API | Card tagging for ChromaDex |
 
 ## Supabase Project
 
@@ -82,9 +80,9 @@ Use this project ID for all Supabase MCP operations: migrations, SQL execution, 
 
 ### 4. ChromaDex (Flagship Feature)
 - Uses **same filter system** as Browse Cards
-- Generation modes: Color (dominant/palette/harmony), Theme, Hybrid
-- Pre-computed data: color extraction (node-vibrant) + AI tagging (Claude Vision)
-- Scoring: CIEDE2000 color distance + tag matching + diversity bonus
+- Generation modes: Color (dominant/palette/harmony)
+- Pre-computed data: color extraction using node-vibrant library
+- Scoring: CIEDE2000 color distance + diversity bonus
 - Usage limits: Guest=0, Free=3/month, Pro=Unlimited
 
 ### 5. Export/Import
@@ -108,8 +106,6 @@ card_variants: id, card_id, variant_type (NORMAL, REVERSE_HOLO, FIRST_EDITION, e
 ### ChromaDex Tables
 ```
 card_colors: id, card_id, dominant_hex, dominant_hsl, palette, brightness, saturation, warmth
-
-card_tags: id, card_id, tag, category (THEME, SETTING, MOOD, COMPOSITION, SUBJECT), confidence
 ```
 
 ### User Tables
@@ -138,7 +134,7 @@ master_set_preferences: id, user_id, set_id, slot_config, include_promos, includ
 
 1. **Variants only in Master Set Tracker** - Browse shows unique cards only to keep counts accurate
 2. **Shared filter system** - ONE reusable filter component/hook/store used by Browse, Builder, and ChromaDex
-3. **Pre-computed ChromaDex data** - Color extraction and AI tagging run as batch jobs during import
+3. **Pre-computed ChromaDex data** - Color extraction runs as batch job during data import
 4. **Supabase as sole backend** - Auth + DB + Storage in one platform with RLS
 
 ## Data Source
@@ -190,7 +186,7 @@ master_set_preferences: id, user_id, set_id, slot_config, include_promos, includ
 | 1 | Card Browser | Grid view, shared filters, search, card modal |
 | 2 | Master Set Tracker | Visual binder, preferences, progress, variants |
 | 3 | Binder Builder | Split-panel, card picker, drag-drop |
-| 4 | ChromaDex | Color extraction, AI tagging, generation UI |
+| 4 | ChromaDex | Color extraction, generation UI |
 | 5 | Export/Import | CSV, PDF, TCGPlayer/Collectr parsers |
 | 6 | Community | Gallery, sharing, curated binders, polish |
 | 7 | Launch | Stripe, feature gating, ads |
@@ -273,7 +269,7 @@ chore: description         # Maintenance
 
 1. **Never show variants in Browse** - only unique cards
 2. **Filter system must be shared** - don't duplicate filter logic
-3. **ChromaDex data is pre-computed** - don't call AI at generation time
+3. **ChromaDex data is pre-computed** - colors extracted during data import, not at runtime
 4. **RLS on all user tables** - enforce at database level
 5. **Optimistic updates** - for responsive drag-and-drop UX
 6. **URL sync for filters** - filters should be shareable via URL params
@@ -288,7 +284,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
-ANTHROPIC_API_KEY
 DATABASE_URL
 ```
 
