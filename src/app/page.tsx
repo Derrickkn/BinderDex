@@ -74,18 +74,16 @@ export default function LandingPage() {
         <div className="mx-auto max-w-4xl text-center">
           <BlurFade delay={0.1}>
             <h1 className="mb-6 text-5xl font-medium tracking-tight text-white sm:text-6xl lg:text-7xl">
-              BinderDex is a{" "}
-              <span className="text-gradient">purpose-built tool</span> for
-              organizing and designing binders
+              Track what you own.{" "}
+              <span className="text-gradient">Discover what you need.</span>
             </h1>
           </BlurFade>
 
           <BlurFade delay={0.2}>
             <p className="mx-auto mb-10 max-w-2xl text-lg text-zinc-400">
-              The ultimate digital Pokémon card binder for collectors. Design
-              custom layouts, organize your TCG collection with precision, and
-              visualize your perfect binder. Both English and Japanese cards are
-              supported.
+              Pokémon TCG collection management with smart color matching.
+              Build master set trackers, create custom binders, and generate
+              stunning layouts with ChromaDex.
             </p>
           </BlurFade>
 
@@ -95,15 +93,15 @@ export default function LandingPage() {
                 href="/signup"
                 className="rounded-md border border-zinc-700 bg-transparent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
               >
-                Start organizing
+                Start collecting
               </Link>
               <Link
                 href="/chromadex"
                 className="group flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
               >
-                <span>New: Color Matching</span>
+                <span>Try ChromaDex</span>
                 <span className="transition-transform group-hover:translate-x-0.5">
-                  &gt;
+                  &rarr;
                 </span>
               </Link>
             </div>
@@ -126,7 +124,7 @@ export default function LandingPage() {
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="rounded bg-zinc-800 px-2 py-1 text-xs text-zinc-400">
-                      Color Match
+                      ChromaDex
                     </div>
                   </div>
                   <div className="text-xs text-zinc-500">Binder Settings</div>
@@ -195,21 +193,21 @@ export default function LandingPage() {
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <BlurFade delay={0.1} inView>
               <div>
-                <p className="mb-2 text-sm text-zinc-500">Introducing</p>
+                <p className="mb-2 text-sm text-zinc-500">Flagship Feature</p>
                 <h2 className="mb-4 text-4xl font-medium text-white">
                   ChromaDex
                 </h2>
                 <p className="mb-6 text-zinc-400">
-                  Create visually stunning binder pages automatically. ChromaDex
-                  analyzes your cards&apos; colors and arranges them into
-                  harmonious layouts—no manual sorting required.
+                  Smart binder page generator that creates aesthetically cohesive
+                  layouts based on color analysis. Pick your cards, choose a style,
+                  and let ChromaDex arrange them perfectly.
                 </p>
                 <ul className="mb-8 space-y-3">
                   {[
-                    "Color-coordinated layouts",
-                    "Multiple arrangement styles",
-                    "One-click generation",
-                    "Unlimited with Pro",
+                    "Dominant color, palette, or harmony modes",
+                    "CIEDE2000 color distance scoring",
+                    "Works with your filtered card selection",
+                    "3 free layouts per month, unlimited with Pro",
                   ].map((item, index) => (
                     <li
                       key={index}
