@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
+  <defs>
+    <!-- Subtle gradient for the "Dex" portion -->
+    <linearGradient id="chromaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366F1"/>
+      <stop offset="50%" stop-color="#EC4899"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Logo Mark: Abstract binder/grid icon -->
+  <g transform="translate(20, 20)">
+    <!-- Binder spine -->
+    <rect x="0" y="0" width="8" height="80" rx="2" fill="#1F2937"/>
+    
+    <!-- 3x3 card grid (representing binder slots) -->
+    <g transform="translate(16, 0)">
+      <!-- Row 1 -->
+      <rect x="0" y="0" width="22" height="24" rx="2" fill="#374151"/>
+      <rect x="26" y="0" width="22" height="24" rx="2" fill="#4B5563"/>
+      <rect x="52" y="0" width="22" height="24" rx="2" fill="#6366F1"/>
+      
+      <!-- Row 2 -->
+      <rect x="0" y="28" width="22" height="24" rx="2" fill="#4B5563"/>
+      <rect x="26" y="28" width="22" height="24" rx="2" fill="#EC4899"/>
+      <rect x="52" y="28" width="22" height="24" rx="2" fill="#4B5563"/>
+      
+      <!-- Row 3 -->
+      <rect x="0" y="56" width="22" height="24" rx="2" fill="#F59E0B"/>
+      <rect x="26" y="56" width="22" height="24" rx="2" fill="#4B5563"/>
+      <rect x="52" y="56" width="22" height="24" rx="2" fill="#374151"/>
+    </g>
+  </g>
+  
+  <!-- Wordmark -->
+  <g transform="translate(120, 70)">
+    <text font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="42" font-weight="700" letter-spacing="-1">
+      <tspan fill="#1F2937">Binder</tspan><tspan fill="url(#chromaGradient)">Dex</tspan>
+    </text>
+  </g>
+</svg>

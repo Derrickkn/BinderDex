@@ -1,0 +1,68 @@
+import { TrackerCard } from "@/lib/types/tracker";
+import { ExportCard } from "./types";
+
+/**
+ * Format variant type for display in exports
+ */
+export function formatVariantForExport(variantType: string): string {
+  if (variantType === "NORMAL") {
+    return "Normal";
+  }
+  return variantType
+    .split("_")
+    .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/**
+ * Format rarity for display in exports
+ * Capitalizes first letter of each word
+ */
+export function formatRarityForExport(rarity: string | null): string {
+  if (!rarity) return "Unknown";
+  return rarity
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/**
+ * Transform TrackerCard array to ExportCard array
+ */
+export function formatMissingCardsForExport(
+  cards: TrackerCard[],
+  setId: string
+): ExportCard[] {
+  return cards.map((card) => ({
+    name: card.name,
+    cardNumber: card.number,
+    setId: setId,
+    fullSetNumber: `${setId}-${card.number}`,
+    rarity: formatRarityForExport(card.rarity),
+    variant: formatVariantForExport(card.variant_type),
+    imageUrl: card.variant_image_url || card.image_small || "",
+  }));
+}
+
+/**
+ * Sanitize filename for safe file downloads
+ */
+export function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9\s-]/g, "") // Remove special characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Replace multiple hyphens with single
+    .trim();
+}
+
+/**
+ * Generate a filename for export
+ */
+export function generateExportFilename(
+  setName: string,
+  format: "pdf" | "xlsx"
+): string {
+  const sanitized = sanitizeFilename(setName);
+  const date = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  return `BinderDex-${sanitized}-Missing-Cards-${date}.${format}`;
+}

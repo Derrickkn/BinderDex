@@ -1,0 +1,96 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
+import { SetWithCardCount, TrackerProgress } from "@/lib/types/tracker";
+
+interface TrackerHeaderProps {
+  set: SetWithCardCount;
+  progress: TrackerProgress;
+}
+
+export function TrackerHeader({
+  set,
+  progress,
+}: TrackerHeaderProps) {
+  return (
+    <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-40">
+      <div className="container mx-auto px-4 py-3">
+        {/* Single row: Back, Set info, Progress */}
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* Back link */}
+          <Link
+            href="/tracker"
+            className="flex items-center justify-center h-8 w-8 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+
+          {/* Set symbol */}
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
+            {set.symbol_url ? (
+              <Image
+                src={set.symbol_url}
+                alt={set.name}
+                width={32}
+                height={32}
+                className="object-contain"
+              />
+            ) : (
+              <span className="text-base font-bold text-zinc-500">
+                {set.name.charAt(0)}
+              </span>
+            )}
+          </div>
+
+          {/* Set details */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-sm font-semibold text-white truncate">{set.name}</h1>
+            <p className="text-xs text-zinc-500 truncate">
+              {set.era} • {set.series}
+            </p>
+          </div>
+
+          {/* Progress indicator */}
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <div className="w-24 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-zinc-500 to-zinc-400 transition-all duration-300"
+                style={{ width: `${progress.percentage}%` }}
+              />
+            </div>
+            <span className="text-xs text-zinc-400 tabular-nums">
+              {progress.ownedCards}/{progress.totalCards}
+            </span>
+          </div>
+
+          {/* Mobile progress */}
+          <div className="sm:hidden text-xs text-zinc-400 tabular-nums shrink-0">
+            {progress.percentage}%
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// Loading skeleton for TrackerHeader
+export function TrackerHeaderSkeleton() {
+  return (
+    <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-sm sticky top-0 z-40">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="h-8 w-8 rounded-md bg-zinc-800 animate-pulse shrink-0" />
+          <div className="h-10 w-10 rounded-lg bg-zinc-800 animate-pulse shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-4 w-32 rounded bg-zinc-800 animate-pulse" />
+            <div className="h-3 w-24 rounded bg-zinc-800 animate-pulse" />
+          </div>
+          <div className="hidden sm:block h-1.5 w-24 rounded-full bg-zinc-800 animate-pulse" />
+          <div className="h-8 w-8 rounded-md bg-zinc-800 animate-pulse shrink-0" />
+        </div>
+      </div>
+    </header>
+  );
+}

@@ -150,10 +150,20 @@ function getVariantsForCard(era: string, rarity: string | null, supertype: strin
 
     case "Scarlet & Violet":
     case "Mega Evolution":
-      // S&V only has reverse holos for Common/Uncommon/Rare, not Double Rare+
+      // S&V only has reverse holos for Common/Uncommon/Rare, not higher rarities
       const noReverseRarities = [
+        // Standard high rarities
         "Double Rare", "Illustration Rare", "Special Illustration Rare",
-        "Hyper Rare", "Ultra Rare", "Secret Rare", "ACE SPEC Rare"
+        "Hyper Rare", "Mega Hyper Rare", "Ultra Rare", "Secret Rare", "ACE SPEC Rare",
+        // Shiny variants
+        "Shiny Rare", "Shiny Ultra Rare",
+        // Holo variants (already have holo treatment)
+        "Rare Holo", "Rare Holo EX", "Rare Holo GX", "Rare Holo LV.X",
+        "Rare Holo V", "Rare Holo VMAX", "Rare Holo VSTAR",
+        // Other special rarities
+        "Rare Ultra", "Rare Secret", "Rare Shiny", "Rare Shining",
+        "Rare Rainbow", "Rare Prism Star", "Rare ACE", "Rare BREAK",
+        "LEGEND", "Amazing Rare"
       ];
       if (!rarity || !noReverseRarities.includes(rarity)) {
         variants.push("REVERSE_HOLO");
@@ -273,7 +283,7 @@ async function importCard(cardData: RawCard, setId: string, era: string) {
     image_small: cardData.images?.small || null,
     image_large: cardData.images?.large || null,
     is_promo: cardData.number?.includes("PROMO") || setId.includes("promo") || false,
-    is_premium: isPremiumCard(cardData.rarity),
+    is_premium: isPremiumCard(cardData.rarity ?? null),
     is_legendary: dexNumbers.some(n => LEGENDARY_DEX.includes(n)),
     is_mythical: dexNumbers.some(n => MYTHICAL_DEX.includes(n)),
     generation,
@@ -289,7 +299,7 @@ async function importCard(cardData: RawCard, setId: string, era: string) {
   }
 
   // Create variants
-  const variantTypes = getVariantsForCard(era, cardData.rarity, cardData.supertype);
+  const variantTypes = getVariantsForCard(era, cardData.rarity ?? null, cardData.supertype);
 
   for (const variantType of variantTypes) {
     const { error: variantError } = await supabase

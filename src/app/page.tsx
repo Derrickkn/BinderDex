@@ -188,18 +188,65 @@ function ChromaDexBinder() {
   );
 }
 
-// Minimalist binder logo component
-const BinderLogo = ({ className = "h-5 w-6" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 20" fill="none">
-    {/* Binder spine/rings */}
-    <rect x="0" y="0" width="4" height="20" rx="1" fill="currentColor" opacity="0.6" />
-    <circle cx="2" cy="4" r="1.5" fill="currentColor" />
-    <circle cx="2" cy="10" r="1.5" fill="currentColor" />
-    <circle cx="2" cy="16" r="1.5" fill="currentColor" />
-    {/* Binder pages */}
-    <rect x="5" y="1" width="18" height="18" rx="1" fill="currentColor" opacity="0.3" />
-    <rect x="6" y="2" width="16" height="16" rx="1" fill="currentColor" opacity="0.5" />
+// BinderDex logo component - matches the brand identity
+const BinderLogo = ({ className = "h-8", showText = false }: { className?: string; showText?: boolean }) => (
+  <svg className={className} viewBox={showText ? "0 0 400 120" : "0 0 100 80"} fill="none">
+    <defs>
+      {/* ChromaDex gradient for the "Dex" portion */}
+      <linearGradient id="chromaGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#6366F1" />
+        <stop offset="50%" stopColor="#EC4899" />
+        <stop offset="100%" stopColor="#F59E0B" />
+      </linearGradient>
+    </defs>
+
+    {/* Logo Mark: Abstract binder/grid icon */}
+    <g transform={showText ? "translate(20, 20)" : "translate(5, 0)"}>
+      {/* Binder spine */}
+      <rect x="0" y="0" width="8" height="80" rx="2" fill="#374151" />
+
+      {/* 3x3 card grid (representing binder slots) */}
+      <g transform="translate(16, 0)">
+        {/* Row 1 */}
+        <rect x="0" y="0" width="22" height="24" rx="2" fill="#4B5563" />
+        <rect x="26" y="0" width="22" height="24" rx="2" fill="#6B7280" />
+        <rect x="52" y="0" width="22" height="24" rx="2" fill="#6366F1" />
+
+        {/* Row 2 */}
+        <rect x="0" y="28" width="22" height="24" rx="2" fill="#6B7280" />
+        <rect x="26" y="28" width="22" height="24" rx="2" fill="#EC4899" />
+        <rect x="52" y="28" width="22" height="24" rx="2" fill="#6B7280" />
+
+        {/* Row 3 */}
+        <rect x="0" y="56" width="22" height="24" rx="2" fill="#F59E0B" />
+        <rect x="26" y="56" width="22" height="24" rx="2" fill="#6B7280" />
+        <rect x="52" y="56" width="22" height="24" rx="2" fill="#4B5563" />
+      </g>
+    </g>
+
+    {/* Wordmark - only shown when showText is true */}
+    {showText && (
+      <text
+        x="120"
+        y="70"
+        fontFamily="system-ui, -apple-system, sans-serif"
+        fontSize="42"
+        fontWeight="700"
+        letterSpacing="-1"
+      >
+        <tspan fill="#E5E7EB">Binder</tspan>
+        <tspan fill="url(#chromaGradient)">Dex</tspan>
+      </text>
+    )}
   </svg>
+);
+
+// Compact text-only logo for navigation
+const BinderLogoText = () => (
+  <span className="text-sm font-semibold tracking-tight">
+    <span className="text-zinc-200">Binder</span>
+    <span className="bg-gradient-to-r from-indigo-400 via-pink-400 to-amber-400 bg-clip-text text-transparent">Dex</span>
+  </span>
 );
 
 export default function LandingPage() {
@@ -208,11 +255,17 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 z-50 w-full border-b border-zinc-800 bg-[#0a0a0a]/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="flex items-center gap-2 text-white">
-            <BinderLogo className="h-5 w-6" />
-            <span className="text-sm font-medium text-zinc-400">BinderDex</span>
+          <Link href="/" className="flex items-center gap-2">
+            <BinderLogo className="h-6 w-auto" />
+            <BinderLogoText />
           </Link>
           <div className="flex items-center gap-6">
+            <Link
+              href="/tracker"
+              className="text-sm text-zinc-400 transition-colors hover:text-white"
+            >
+              Tracker
+            </Link>
             <Link
               href="/features"
               className="text-sm text-zinc-400 transition-colors hover:text-white"
@@ -704,9 +757,12 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-zinc-800 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-2 text-zinc-600">
-            <BinderLogo className="h-4 w-5" />
-            <span className="text-sm">BinderDex</span>
+          <div className="flex items-center gap-2">
+            <BinderLogo className="h-5 w-auto opacity-60" />
+            <span className="text-sm font-medium">
+              <span className="text-zinc-500">Binder</span>
+              <span className="text-zinc-600">Dex</span>
+            </span>
           </div>
           <p className="text-sm text-zinc-600">
             © 2025 BinderDex. All rights reserved.
