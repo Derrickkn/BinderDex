@@ -214,7 +214,9 @@ export async function generateMissingCardsPDF(
     if (rowsOnCurrentPage >= rowsPerPage) {
       doc.addPage();
       currentPage++;
-      startY = addPageHeader(doc, setName, currentPage, totalPages, margin);
+      // Only show page number on subsequent pages (header already shown on page 1)
+      addPageNumberOnly(doc, currentPage, totalPages, margin);
+      startY = 15; // Reduced start Y for pages without full header
       currentY = startY;
       currentX = margin;
       cardsInCurrentRow = 0;

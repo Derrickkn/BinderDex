@@ -86,31 +86,34 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
         if (step.target === "[data-coach-quick-fill-dropdown]") {
           const quickFillButton = document.querySelector("[data-coach-quick-fill]") as HTMLButtonElement;
           if (quickFillButton) {
-            // Wait a bit to ensure the button is ready
-            setTimeout(() => {
-              quickFillButton.click();
-              // Keep checking if dropdown exists and retry if needed
-              const checkDropdown = () => {
-                const dropdown = document.querySelector(step.target);
-                if (dropdown) {
+            // Click to open dropdown
+            quickFillButton.click();
+
+            // Wait for dropdown to be positioned with multiple retries
+            let retryCount = 0;
+            const maxRetries = 10;
+            const checkInterval = 100;
+
+            const checkDropdown = () => {
+              const dropdown = document.querySelector(step.target);
+              if (dropdown) {
+                // Dropdown found, wait a bit more for positioning to settle
+                setTimeout(() => {
                   dropdown.scrollIntoView({ behavior: "smooth", block: "center" });
+                  // Update position multiple times to handle async positioning
                   updateTargetPosition();
-                } else {
-                  // Dropdown not found, try clicking again
-                  setTimeout(() => {
-                    quickFillButton.click();
-                    setTimeout(() => {
-                      const retryDropdown = document.querySelector(step.target);
-                      if (retryDropdown) {
-                        retryDropdown.scrollIntoView({ behavior: "smooth", block: "center" });
-                        updateTargetPosition();
-                      }
-                    }, 150);
-                  }, 100);
-                }
-              };
-              setTimeout(checkDropdown, 100);
-            }, 100);
+                  setTimeout(updateTargetPosition, 50);
+                  setTimeout(updateTargetPosition, 150);
+                  setTimeout(updateTargetPosition, 300);
+                }, 50);
+              } else if (retryCount < maxRetries) {
+                // Retry
+                retryCount++;
+                setTimeout(checkDropdown, checkInterval);
+              }
+            };
+
+            setTimeout(checkDropdown, 100);
           }
         } else {
           const element = document.querySelector(step.target);
@@ -334,8 +337,8 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
         >
           {/* Minimalist outline mouse cursor */}
           <svg
-            width="36"
-            height="36"
+            width="42"
+            height="42"
             viewBox="0 0 40 40"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"

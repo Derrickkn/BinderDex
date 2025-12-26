@@ -27,29 +27,11 @@ export function TrackerHeader({
             <ArrowLeft className="h-4 w-4" />
           </Link>
 
-          {/* Set logo */}
-          <div className="relative h-8 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center p-1">
-            {set.logo_url ? (
-              <Image
-                src={set.logo_url}
-                alt={set.name}
-                width={56}
-                height={32}
-                className="object-contain max-w-full max-h-full"
-              />
-            ) : set.symbol_url ? (
-              <Image
-                src={set.symbol_url}
-                alt={set.name}
-                width={28}
-                height={28}
-                className="object-contain"
-              />
-            ) : (
-              <span className="text-sm font-bold text-zinc-500">
-                {set.name.charAt(0)}
-              </span>
-            )}
+          {/* Set abbreviation */}
+          <div className="relative h-8 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+              {set.id.toUpperCase()}
+            </span>
           </div>
 
           {/* Set details with inline progress */}

@@ -64,7 +64,7 @@ export default function TrackerSetPage() {
     {
       target: "[data-coach-card-slot]",
       title: "Track Your Collection",
-      description: "Click any card to mark it as owned or missing.",
+      description: "Left-click any card to mark it as owned or missing.",
       position: "bottom",
     },
     {
@@ -83,7 +83,7 @@ export default function TrackerSetPage() {
       target: "[data-coach-quick-fill-dropdown]",
       title: "Quick Fill",
       description: "Quickly mark entire rarities as owned with these buttons.",
-      position: "bottom",
+      position: "left",
     },
     {
       target: "[data-coach-missing-cards]",

@@ -182,45 +182,47 @@ export function MissingCardsList({
           Missing Cards ({missingCards.length})
         </span>
 
-        {/* Sort dropdown */}
-        <div className="relative" ref={sortDropdownRef}>
-          <button
-            onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
-          >
-            <span className="hidden sm:inline">Sort:</span>
-            <span>{currentSortLabel}</span>
-            {currentSortIcon}
-            <ChevronDown className={cn(
-              "h-3 w-3 transition-transform ml-0.5",
-              sortDropdownOpen && "rotate-180"
-            )} />
-          </button>
+        {/* Sort dropdown - only show when expanded */}
+        {isExpanded && (
+          <div className="relative" ref={sortDropdownRef}>
+            <button
+              onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
+            >
+              <span className="hidden sm:inline">Sort:</span>
+              <span>{currentSortLabel}</span>
+              {currentSortIcon}
+              <ChevronDown className={cn(
+                "h-3 w-3 transition-transform ml-0.5",
+                sortDropdownOpen && "rotate-180"
+              )} />
+            </button>
 
-          {sortDropdownOpen && (
-            <div className="absolute left-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl overflow-hidden">
-              {sortOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleSortClick(option.value)}
-                  className={cn(
-                    "w-full px-3 py-2 text-left text-xs transition-colors flex items-center gap-2",
-                    sortField === option.value
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
-                  )}
-                >
-                  <span className="flex-1">{option.label}</span>
-                  {sortField === option.value && (
-                    sortDirection === "asc"
-                      ? <ArrowUp className="h-3 w-3" />
-                      : <ArrowDown className="h-3 w-3" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+            {sortDropdownOpen && (
+              <div className="absolute left-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl overflow-hidden">
+                {sortOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleSortClick(option.value)}
+                    className={cn(
+                      "w-full px-3 py-2 text-left text-xs transition-colors flex items-center gap-2",
+                      sortField === option.value
+                        ? "bg-zinc-800 text-white"
+                        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
+                    )}
+                  >
+                    <span className="flex-1">{option.label}</span>
+                    {sortField === option.value && (
+                      sortDirection === "asc"
+                        ? <ArrowUp className="h-3 w-3" />
+                        : <ArrowDown className="h-3 w-3" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Spacer */}
         <div className="flex-1" />
