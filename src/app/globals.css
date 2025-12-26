@@ -48,21 +48,7 @@ body {
 }
 
 /* Coach Marks Styles */
-@keyframes click-animation {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: translateY(-2px) scale(0.95);
-  }
-}
-
-/* Removed glow animation per user request */
-
-.animate-click-left,
-.animate-click-right {
-  animation: click-animation 1.5s ease-in-out infinite;
-}
+/* Mouse cursor animation removed per user request */
 
 /* Grey out all cards during step 0 (first click) */
 body[data-coach-step="0"] [data-coach-card-slot] img {
@@ -103,6 +89,20 @@ body[data-coach-step="2"] [data-coach-navigation] {
 /* Highlight both quick fill button and dropdown during step 3 */
 body[data-coach-step="3"] [data-coach-quick-fill],
 body[data-coach-step="3"] [data-coach-quick-fill-dropdown] {
+  position: relative;
+  z-index: 103 !important;
+  opacity: 1 !important;
+}
+
+/* Ensure missing cards section is visible during step 4 */
+body[data-coach-step="4"] [data-coach-missing-cards] {
+  position: relative;
+  z-index: 103 !important;
+  opacity: 1 !important;
+}
+
+/* Ensure export buttons are visible during step 5 */
+body[data-coach-step="5"] [data-coach-export] {
   position: relative;
   z-index: 103 !important;
   opacity: 1 !important;

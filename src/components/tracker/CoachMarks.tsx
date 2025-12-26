@@ -175,7 +175,8 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
 
   // Calculate tooltip position with viewport constraints
   const getTooltipStyle = (): React.CSSProperties => {
-    const padding = 12;
+    // Use smaller padding for quick fill dropdown to reduce gap
+    const padding = step.target === "[data-coach-quick-fill-dropdown]" ? 8 : 12;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const tooltipWidth = 320; // max-w-[calc(100vw-2rem)] = 320px on most screens
@@ -333,12 +334,11 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
         >
           {/* Minimalist outline mouse cursor */}
           <svg
-            width="28"
-            height="28"
+            width="36"
+            height="36"
             viewBox="0 0 40 40"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={currentStep === 0 ? "animate-click-left" : "animate-click-right"}
           >
             {/* Mouse outline body */}
             <path
