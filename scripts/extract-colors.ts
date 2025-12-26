@@ -8,7 +8,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import Vibrant from "node-vibrant";
+import { Vibrant } from "node-vibrant/node";
 import { config } from "dotenv";
 
 // Load environment variables
@@ -163,8 +163,41 @@ async function extractColorsFromImage(imageUrl: string): Promise<{
   }
 }
 
+// Process a single card and return result
+async function processCard(card: { id: string; image_large: string | null; image_small: string | null }): Promise<{
+  id: string;
+  success: boolean;
+  hex?: string;
+  error?: string;
+}> {
+  const imageUrl = card.image_large || card.image_small;
+  if (!imageUrl) return { id: card.id, success: false, error: "no image" };
+
+  const colors = await extractColorsFromImage(imageUrl);
+
+  if (colors) {
+    const { error } = await supabase
+      .from("card_colors")
+      .upsert({
+        card_id: card.id,
+        dominant_hex: colors.dominantHex,
+        dominant_hsl: colors.dominantHsl,
+        palette: colors.palette,
+        brightness: colors.brightness,
+        saturation: colors.saturation,
+        warmth: colors.warmth,
+      }, { onConflict: "card_id" });
+
+    if (error) {
+      return { id: card.id, success: false, error: error.message };
+    }
+    return { id: card.id, success: true, hex: colors.dominantHex };
+  }
+  return { id: card.id, success: false, error: "extraction failed" };
+}
+
 async function processCards(setId?: string, limit?: number) {
-  console.log("Starting color extraction for ChromaDex...\n");
+  console.log("Starting color extraction for ChromaDex (parallel mode)...\n");
 
   // Build query for cards without colors
   let query = supabase
@@ -202,49 +235,32 @@ async function processCards(setId?: string, limit?: number) {
   // Apply limit if specified
   const cards = limit ? cardsToProcess.slice(0, limit) : cardsToProcess;
 
-  console.log(`Processing ${cards.length} cards (${allCards.length - cardsToProcess.length} already have colors)\n`);
+  console.log(`Processing ${cards.length} cards (${allCards.length - cardsToProcess.length} already have colors)`);
 
+  const BATCH_SIZE = 10; // Process 10 cards in parallel
   let processed = 0;
   let errors = 0;
 
-  for (const card of cards) {
-    const imageUrl = card.image_large || card.image_small;
-    if (!imageUrl) continue;
+  // Process in batches
+  for (let i = 0; i < cards.length; i += BATCH_SIZE) {
+    const batch = cards.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(cards.length / BATCH_SIZE);
 
-    process.stdout.write(`Processing ${card.id}... `);
+    process.stdout.write(`\rBatch ${batchNum}/${totalBatches} (${i}/${cards.length} cards)...`);
 
-    const colors = await extractColorsFromImage(imageUrl);
+    const results = await Promise.all(batch.map(card => processCard(card)));
 
-    if (colors) {
-      const { error } = await supabase
-        .from("card_colors")
-        .upsert({
-          card_id: card.id,
-          dominant_hex: colors.dominantHex,
-          dominant_hsl: colors.dominantHsl,
-          palette: colors.palette,
-          brightness: colors.brightness,
-          saturation: colors.saturation,
-          warmth: colors.warmth,
-        }, { onConflict: "card_id" });
-
-      if (error) {
-        console.log(`ERROR: ${error.message}`);
-        errors++;
-      } else {
-        console.log(`OK (${colors.dominantHex})`);
+    for (const result of results) {
+      if (result.success) {
         processed++;
+      } else {
+        errors++;
       }
-    } else {
-      console.log("SKIPPED (no colors extracted)");
-      errors++;
     }
-
-    // Rate limit to avoid overwhelming the image server
-    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  console.log(`\nColor extraction complete!`);
+  console.log(`\n\nColor extraction complete!`);
   console.log(`Processed: ${processed}, Errors: ${errors}`);
 }
 

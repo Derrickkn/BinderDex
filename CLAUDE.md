@@ -1,5 +1,7 @@
 # BinderDex - Project Context
 
+> Based on Project Plan v4.0 & Technical Specification v4.0 (December 2025)
+
 ## Overview
 
 BinderDex is a Pokémon TCG collection management web application featuring a **Unified Binder Builder** that combines two complementary approaches to binder page creation:
@@ -10,6 +12,15 @@ BinderDex is a Pokémon TCG collection management web application featuring a **
 Both modes share a single canvas editor, allowing users to seamlessly blend automated suggestions with manual creativity.
 
 **Status**: In Development (Solo developer + Claude Code)
+
+## Core Value Pillars
+
+| Pillar | Description |
+|--------|-------------|
+| **Browse** | Comprehensive card database with powerful multi-filter search |
+| **Track** | Visual master set tracker showing physical binder layout |
+| **Build** | Unified builder with manual creation + algorithmic generation |
+| **Share** | Community gallery, templates, and social export options |
 
 ## Bug Fixing
 
@@ -66,12 +77,18 @@ Use this project ID for all Supabase MCP operations: migrations, SQL execution, 
 ## Core Features
 
 ### 1. Card Database Browser
+
+**Key Clarification**: Browse Cards displays unique cards only - no variants. This keeps card counts accurate and UI clean. Variants are only relevant in Master Set Tracker.
+
 - Displays **unique cards only** (NO variants in browse view)
 - Shared filter system: text search, set, era, type, rarity, generation, supertype, premium/legendary/mythical toggles
 - Responsive grid with infinite scroll and virtualization
 - Card detail modal with zoom, metadata, and actions
 
 ### 2. Master Set Tracker
+
+**Key Clarification**: The Master Set Tracker serves as a visual guide showing what the user's physical binder should look like when completed. Users can look at the virtual binder and see cards they are missing in each specific slot.
+
 - **Visual binder representation** showing what user's physical binder should look like
 - Variants (Normal, Reverse Holo, First Edition, etc.) are ONLY shown here
 - Slot configurations: 9 (3×3), 12 (3×4), 16 (4×4)

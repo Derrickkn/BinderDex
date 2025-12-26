@@ -36,7 +36,8 @@
       "mcp__supabase__generate_typescript_types",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(npx tsx:*)",
-      "Bash(git clone:*)"
+      "Bash(git clone:*)",
+      "Bash(npm run test:run:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
