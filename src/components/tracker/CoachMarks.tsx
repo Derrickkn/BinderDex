@@ -335,57 +335,41 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
             transform: "translate(-50%, -50%)",
           }}
         >
-          {/* Minimalist outline mouse cursor */}
+          {/* Minimalist cursor pointer */}
           <svg
-            width="42"
-            height="42"
-            viewBox="0 0 40 40"
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Mouse outline body */}
+            {/* Cursor arrow shape */}
             <path
-              d="M20 6C15.5817 6 12 9.58172 12 14V24C12 28.4183 15.5817 32 20 32C24.4183 32 28 28.4183 28 24V14C28 9.58172 24.4183 6 20 6Z"
-              fill="none"
-              stroke="#6366f1"
+              d="M3 3L10.5 20L13.5 12.5L21 9.5L3 3Z"
+              fill={currentStep === 0 ? "rgba(99, 102, 241, 0.9)" : "rgba(161, 161, 170, 0.8)"}
+              stroke="rgba(244, 244, 245, 0.9)"
               strokeWidth="1.5"
+              strokeLinejoin="round"
             />
-
-            {/* Left button shading - darker when pressed (step 0) */}
-            <path
-              d="M20 6C15.5817 6 12 9.58172 12 14V18H20V6Z"
-              fill={currentStep === 0 ? "rgba(99, 102, 241, 0.4)" : "none"}
-              stroke="#6366f1"
-              strokeWidth="1.5"
-            />
-
-            {/* Right button shading - darker when pressed (step 1) */}
-            <path
-              d="M20 6C24.4183 6 28 9.58172 28 14V18H20V6Z"
-              fill={currentStep === 1 ? "rgba(99, 102, 241, 0.4)" : "none"}
-            />
-
-            {/* Center divider line */}
-            <line
-              x1="20"
-              y1="6"
-              x2="20"
-              y2="18"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-            />
-
-            {/* Scroll wheel */}
-            <rect
-              x="18"
-              y="11"
-              width="4"
-              height="5"
-              rx="2"
-              fill="none"
-              stroke="#6366f1"
-              strokeWidth="1.5"
-            />
+            {/* Click indicator - show ring for right-click on step 1 */}
+            {currentStep === 1 && (
+              <>
+                <circle
+                  cx="17"
+                  cy="7"
+                  r="4"
+                  fill="none"
+                  stroke="rgba(99, 102, 241, 0.8)"
+                  strokeWidth="2"
+                />
+                <circle
+                  cx="17"
+                  cy="7"
+                  r="2.5"
+                  fill="rgba(99, 102, 241, 0.6)"
+                />
+              </>
+            )}
           </svg>
         </div>
       )}
