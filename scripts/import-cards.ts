@@ -53,7 +53,7 @@ const MYTHICAL_DEX = [
 // Era detection based on set ID patterns and series
 function detectEra(setId: string, series: string): string {
   // Mega Evolution 2025 sets
-  if (setId.startsWith("mee") || setId.startsWith("mep") || setId.startsWith("mef")) {
+  if (setId.startsWith("me") || series.includes("Mega Evolution")) {
     return "Mega Evolution";
   }
   // Scarlet & Violet
@@ -223,9 +223,6 @@ interface RawCard {
     small?: string;
     large?: string;
   };
-  set: {
-    id: string;
-  };
 }
 
 async function importSet(setData: RawSet) {
@@ -257,13 +254,13 @@ async function importSet(setData: RawSet) {
   return set;
 }
 
-async function importCard(cardData: RawCard, era: string) {
+async function importCard(cardData: RawCard, setId: string, era: string) {
   const dexNumbers = cardData.nationalPokedexNumbers || [];
   const generation = getGeneration(dexNumbers);
 
   const card = {
     id: cardData.id,
-    set_id: cardData.set.id,
+    set_id: setId,
     name: cardData.name,
     number: cardData.number,
     rarity: cardData.rarity || null,
@@ -275,7 +272,7 @@ async function importCard(cardData: RawCard, era: string) {
     national_dex_numbers: dexNumbers,
     image_small: cardData.images?.small || null,
     image_large: cardData.images?.large || null,
-    is_promo: cardData.number?.includes("PROMO") || cardData.set.id?.includes("promo") || false,
+    is_promo: cardData.number?.includes("PROMO") || setId.includes("promo") || false,
     is_premium: isPremiumCard(cardData.rarity),
     is_legendary: dexNumbers.some(n => LEGENDARY_DEX.includes(n)),
     is_mythical: dexNumbers.some(n => MYTHICAL_DEX.includes(n)),
@@ -316,12 +313,27 @@ async function importCard(cardData: RawCard, era: string) {
 
 async function downloadAndImport(setIds?: string[]) {
   console.log("Starting Pokemon TCG data import...");
-  console.log("Fetching data from GitHub repository...\n");
 
-  // Download sets data
-  const setsUrl = "https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json";
-  const setsResponse = await fetch(setsUrl);
-  const setsData: RawSet[] = await setsResponse.json();
+  // Check for local data first
+  const localDataPath = path.join(process.cwd(), "data/pokemon-tcg-data");
+  const useLocal = fs.existsSync(localDataPath);
+
+  if (useLocal) {
+    console.log("Using local data from data/pokemon-tcg-data/\n");
+  } else {
+    console.log("Fetching data from GitHub repository...\n");
+  }
+
+  // Load sets data
+  let setsData: RawSet[];
+  if (useLocal) {
+    const setsPath = path.join(localDataPath, "sets/en.json");
+    setsData = JSON.parse(fs.readFileSync(setsPath, "utf-8"));
+  } else {
+    const setsUrl = "https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json";
+    const setsResponse = await fetch(setsUrl);
+    setsData = await setsResponse.json();
+  }
 
   // Filter sets if specific ones requested
   const setsToImport = setIds
@@ -329,38 +341,74 @@ async function downloadAndImport(setIds?: string[]) {
     : setsData;
 
   console.log(`Found ${setsToImport.length} sets to import\n`);
+  console.log("=".repeat(60) + "\n");
+
+  let totalCards = 0;
+  let totalVariants = 0;
 
   // Import each set and its cards
-  for (const setData of setsToImport) {
-    const set = await importSet(setData);
-    if (!set) continue;
+  for (let setIndex = 0; setIndex < setsToImport.length; setIndex++) {
+    const setData = setsToImport[setIndex];
+    const setProgress = `[${setIndex + 1}/${setsToImport.length}]`;
 
-    // Download cards for this set
-    const cardsUrl = `https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/${setData.id}.json`;
+    console.log(`${setProgress} ${setData.name} (${setData.id})`);
+    console.log(`  ├─ Stage 1: Importing set metadata...`);
+
+    const set = await importSet(setData);
+    if (!set) {
+      console.log(`  └─ FAILED: Could not import set\n`);
+      continue;
+    }
+    console.log(`  │  └─ Done (Era: ${set.era})`);
 
     try {
-      const cardsResponse = await fetch(cardsUrl);
-      if (!cardsResponse.ok) {
-        console.warn(`  No cards found for set ${setData.id}`);
-        continue;
+      let cardsData: RawCard[];
+
+      console.log(`  ├─ Stage 2: Loading card data...`);
+      if (useLocal) {
+        const cardsPath = path.join(localDataPath, `cards/en/${setData.id}.json`);
+        if (!fs.existsSync(cardsPath)) {
+          console.log(`  └─ SKIPPED: No cards file found\n`);
+          continue;
+        }
+        cardsData = JSON.parse(fs.readFileSync(cardsPath, "utf-8"));
+      } else {
+        const cardsUrl = `https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en/${setData.id}.json`;
+        const cardsResponse = await fetch(cardsUrl);
+        if (!cardsResponse.ok) {
+          console.log(`  └─ SKIPPED: No cards found\n`);
+          continue;
+        }
+        cardsData = await cardsResponse.json();
       }
+      console.log(`  │  └─ Found ${cardsData.length} cards`);
 
-      const cardsData: RawCard[] = await cardsResponse.json();
-      console.log(`  Importing ${cardsData.length} cards...`);
-
+      console.log(`  ├─ Stage 3: Importing cards & variants...`);
       let imported = 0;
-      for (const cardData of cardsData) {
-        const card = await importCard(cardData, set.era);
+      const progressInterval = Math.max(1, Math.floor(cardsData.length / 10));
+
+      for (let i = 0; i < cardsData.length; i++) {
+        const cardData = cardsData[i];
+        const card = await importCard(cardData, set.id, set.era);
         if (card) imported++;
+
+        // Show progress every 10%
+        if ((i + 1) % progressInterval === 0 || i === cardsData.length - 1) {
+          const pct = Math.round(((i + 1) / cardsData.length) * 100);
+          process.stdout.write(`\r  │  └─ Progress: ${i + 1}/${cardsData.length} cards (${pct}%)   `);
+        }
       }
 
-      console.log(`  Imported ${imported}/${cardsData.length} cards\n`);
+      console.log(`\n  └─ COMPLETE: ${imported} cards imported\n`);
+      totalCards += imported;
     } catch (error) {
-      console.error(`  Error fetching cards for ${setData.id}:`, error);
+      console.log(`  └─ ERROR: ${error}\n`);
     }
   }
 
-  console.log("\nImport complete!");
+  console.log("=".repeat(60));
+  console.log(`\nImport complete!`);
+  console.log(`Total cards imported: ${totalCards}`);
 }
 
 // Parse command line arguments

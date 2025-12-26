@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
@@ -45,26 +43,41 @@ export type Database = {
       }
       binder_slots: {
         Row: {
+          content_type: Database["public"]["Enums"]["slot_content_type"]
           created_at: string | null
+          crop_data: Json | null
+          custom_image_url: string | null
           id: string
           page_id: string
           position: number
+          span_cols: number
+          span_rows: number
           updated_at: string | null
           variant_id: string | null
         }
         Insert: {
+          content_type?: Database["public"]["Enums"]["slot_content_type"]
           created_at?: string | null
+          crop_data?: Json | null
+          custom_image_url?: string | null
           id?: string
           page_id: string
           position: number
+          span_cols?: number
+          span_rows?: number
           updated_at?: string | null
           variant_id?: string | null
         }
         Update: {
+          content_type?: Database["public"]["Enums"]["slot_content_type"]
           created_at?: string | null
+          crop_data?: Json | null
+          custom_image_url?: string | null
           id?: string
           page_id?: string
           position?: number
+          span_cols?: number
+          span_rows?: number
           updated_at?: string | null
           variant_id?: string | null
         }
@@ -85,6 +98,56 @@ export type Database = {
           },
         ]
       }
+      binder_templates: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_premium: boolean
+          layout_data: Json
+          name: string
+          preview_image_url: string | null
+          slot_config: Database["public"]["Enums"]["slot_config"]
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          layout_data?: Json
+          name: string
+          preview_image_url?: string | null
+          slot_config?: Database["public"]["Enums"]["slot_config"]
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_premium?: boolean
+          layout_data?: Json
+          name?: string
+          preview_image_url?: string | null
+          slot_config?: Database["public"]["Enums"]["slot_config"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "binder_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       binders: {
         Row: {
           created_at: string | null
@@ -95,6 +158,7 @@ export type Database = {
           master_set_id: string | null
           name: string
           slot_config: Database["public"]["Enums"]["slot_config"]
+          template_id: string | null
           type: Database["public"]["Enums"]["binder_type"]
           updated_at: string | null
           user_id: string
@@ -108,6 +172,7 @@ export type Database = {
           master_set_id?: string | null
           name: string
           slot_config?: Database["public"]["Enums"]["slot_config"]
+          template_id?: string | null
           type?: Database["public"]["Enums"]["binder_type"]
           updated_at?: string | null
           user_id: string
@@ -121,6 +186,7 @@ export type Database = {
           master_set_id?: string | null
           name?: string
           slot_config?: Database["public"]["Enums"]["slot_config"]
+          template_id?: string | null
           type?: Database["public"]["Enums"]["binder_type"]
           updated_at?: string | null
           user_id?: string
@@ -131,6 +197,13 @@ export type Database = {
             columns: ["master_set_id"]
             isOneToOne: false
             referencedRelation: "sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "binders_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "binder_templates"
             referencedColumns: ["id"]
           },
           {
@@ -291,6 +364,50 @@ export type Database = {
             columns: ["set_id"]
             isOneToOne: false
             referencedRelation: "sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_images: {
+        Row: {
+          file_size: number
+          height: number | null
+          id: string
+          mime_type: string
+          original_filename: string
+          storage_path: string
+          uploaded_at: string | null
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          file_size: number
+          height?: number | null
+          id?: string
+          mime_type?: string
+          original_filename: string
+          storage_path: string
+          uploaded_at?: string | null
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          file_size?: number
+          height?: number | null
+          id?: string
+          mime_type?: string
+          original_filename?: string
+          storage_path?: string
+          uploaded_at?: string | null
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_images_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -524,8 +641,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      binder_type: "CUSTOM" | "MASTER_SET" | "CHROMADEX"
+      binder_type: "CUSTOM" | "MASTER_SET" | "CHROMADEX" | "MICHI"
       slot_config: "NINE" | "TWELVE" | "SIXTEEN"
+      slot_content_type: "CARD" | "CUSTOM_IMAGE" | "EMPTY" | "MERGED"
       user_tier: "GUEST" | "FREE" | "PRO"
       variant_type:
         | "NORMAL"
@@ -660,8 +778,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      binder_type: ["CUSTOM", "MASTER_SET", "CHROMADEX"],
+      binder_type: ["CUSTOM", "MASTER_SET", "CHROMADEX", "MICHI"],
       slot_config: ["NINE", "TWELVE", "SIXTEEN"],
+      slot_content_type: ["CARD", "CUSTOM_IMAGE", "EMPTY", "MERGED"],
       user_tier: ["GUEST", "FREE", "PRO"],
       variant_type: [
         "NORMAL",

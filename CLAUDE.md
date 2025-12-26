@@ -2,7 +2,12 @@
 
 ## Overview
 
-BinderDex is a Pokémon TCG collection management web application. The flagship feature is **ChromaDex**, a smart binder page generator that creates aesthetically cohesive layouts based on pre-computed color analysis.
+BinderDex is a Pokémon TCG collection management web application featuring a **Unified Binder Builder** that combines two complementary approaches to binder page creation:
+
+- **ChromaDex Mode**: Algorithm-powered page generation based on color analysis and visual harmony
+- **Michi Mode**: Full creative control with custom images, slot merging, and scrapbook-style layouts
+
+Both modes share a single canvas editor, allowing users to seamlessly blend automated suggestions with manual creativity.
 
 **Status**: In Development (Solo developer + Claude Code)
 
@@ -30,9 +35,11 @@ The bug-fixer agent has full context of the BinderDex architecture and can trace
 | State | Zustand + React Query | Client + server state |
 | Database | Supabase PostgreSQL | With Row Level Security |
 | Auth | Supabase Auth | Email only (OAuth later) |
-| Storage | Supabase Storage | Card images, exports |
+| Storage | Supabase Storage | Card images, custom uploads, exports |
 | Hosting | Vercel | Preview deployments on PRs |
 | Payments | Stripe | Subscriptions + webhooks |
+| Drag & Drop | @dnd-kit/core | Modern, accessible drag-drop library |
+| Image Processing | Cropper.js + node-vibrant | Client-side cropping, color extraction |
 
 ## Supabase Project
 
@@ -70,24 +77,40 @@ Use this project ID for all Supabase MCP operations: migrations, SQL execution, 
 - Slot configurations: 9 (3×3), 12 (3×4), 16 (4×4)
 - Dynamic preferences: toggle promos, toggle reverse holos
 - Visual states: Owned (full image) vs Missing (greyed placeholder)
+- Progress tracking: Completion percentage, missing cards list
 
-### 3. Binder Builder
-- **Split-panel layout**: Card Picker (left) + Binder Canvas (right)
-- Card Picker uses same filter system as Browse
-- Drag-and-drop with @dnd-kit/core
-- Page navigation, add/remove pages
-- Auto-save with debounce
+### 3. Unified Binder Builder (Flagship Feature)
+The Unified Binder Builder combines ChromaDex's algorithmic page generation with Michi Method's creative freedom into a single, cohesive experience.
 
-### 4. ChromaDex (Flagship Feature)
-- Uses **same filter system** as Browse Cards
-- Generation modes: Color (dominant/palette/harmony)
+**Two Entry Points, One Canvas:**
+
+| Aspect | ChromaDex Mode | Michi Mode |
+|--------|----------------|------------|
+| Philosophy | "Inspire me" - Algorithm suggests aesthetically cohesive pages | "I have a vision" - Full creative control over every detail |
+| Starting Point | Select color/theme + filters, generate page | Blank canvas or template |
+| Card Selection | Algorithm picks cards based on color harmony | User manually drags cards from picker |
+| After Creation | Opens in shared canvas for manual tweaks | Can use ChromaDex to fill remaining slots |
+
+**Shared Canvas Editor Features:**
+- **Left Panel (Card Picker)**: Search bar, full filter system, scrollable card grid, upload button
+- **Right Panel (Binder Canvas)**: Visual grid, droppable slots, page navigation, ChromaDex button
+
+**Michi-Specific Features:**
+- **Slot Merging**: Select multiple slots → merge into single display area for full-art spreads
+- **Custom Image Upload**: PNG/JPG uploads, auto-crop to card dimensions, position controls
+- **Templates**: Pre-built layouts (Evolution Line, Type Collection, Artist Tribute)
+- **Full-Art Spread Generator**: Upload image → auto-slice into 9/12/16 card-sized segments
+
+**ChromaDex Generation System:**
+- Generation modes: Color - Dominant, Color - Palette, Color - Harmony
 - Pre-computed data: color extraction using node-vibrant library
 - Scoring: CIEDE2000 color distance + diversity bonus
-- Usage limits: Guest=0, Free=3/month, Pro=Unlimited
+- In-Canvas Options: Generate for entire page, empty slots only, or selected slots
+- Uses **same filter system** as Browse Cards
 
-### 5. Export/Import
-- Basic Export (Free): CSV/JSON
-- Premium Export (Pro): PDF with card images
+### 4. Export/Import
+- Basic Export (Free): CSV/JSON, High-res PNG
+- Premium Export (Pro): Print-Ready PDF, Social Export (Instagram/TikTok formats)
 - Import: TCGPlayer, Collectr, custom CSV
 
 ## Database Schema
@@ -100,12 +123,12 @@ cards: id, set_id, name, number, rarity, supertype, subtypes[], types[], hp, art
        national_dex_numbers[], image_small, image_large, is_promo, is_premium,
        is_legendary, is_mythical, generation
 
-card_variants: id, card_id, variant_type (NORMAL, REVERSE_HOLO, FIRST_EDITION, etc.), image_url
+card_variants: id, card_id, variant_type (NORMAL, REVERSE_HOLO, FIRST_EDITION, SHADOWLESS, UNLIMITED), image_url
 ```
 
 ### ChromaDex Tables
 ```
-card_colors: id, card_id, dominant_hex, dominant_hsl, palette, brightness, saturation, warmth
+card_colors: id, card_id (UNIQUE), dominant_hex, dominant_hsl (JSONB), palette (JSONB), brightness, saturation, warmth
 ```
 
 ### User Tables
@@ -115,27 +138,41 @@ user_profiles: id (= auth.users.id), email, display_name, avatar_url, tier,
 
 user_collections: id, user_id, variant_id, quantity, condition, notes, acquired_date
 
-subscriptions: id, user_id, stripe_customer_id, stripe_sub_id, status, current_period_end
+subscriptions: id, user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end
 ```
 
-### Binder Tables
+### Binder Tables (Updated for Unified Builder)
 ```
-binders: id, user_id, name, description, slot_config, type (CUSTOM/MASTER_SET/CHROMADEX),
-         master_set_id, is_public, is_curated
+binders: id, user_id, name, description, slot_config,
+         type (CUSTOM/MASTER_SET/CHROMADEX/MICHI),
+         master_set_id, is_public, is_curated, template_id
 
 binder_pages: id, binder_id, page_number
 
-binder_slots: id, page_id, position, variant_id (nullable)
+binder_slots: id, page_id, position (0-8/0-11/0-15),
+              content_type (CARD/CUSTOM_IMAGE/EMPTY/MERGED),  -- Michi feature
+              variant_id (nullable),
+              custom_image_url TEXT,                          -- Michi feature
+              span_cols INTEGER DEFAULT 1,                    -- Slot merging
+              span_rows INTEGER DEFAULT 1,                    -- Slot merging
+              crop_data JSONB                                 -- {x, y, zoom, rotation}
 
 master_set_preferences: id, user_id, set_id, slot_config, include_promos, include_reverse_holos
+
+binder_templates: id, name, description, category, slot_config,
+                  layout_data (JSONB), is_premium, preview_image_url, created_by
+
+custom_images: id, user_id, storage_path, original_filename, file_size, uploaded_at
 ```
 
 ## Key Architectural Decisions
 
-1. **Variants only in Master Set Tracker** - Browse shows unique cards only to keep counts accurate
-2. **Shared filter system** - ONE reusable filter component/hook/store used by Browse, Builder, and ChromaDex
-3. **Pre-computed ChromaDex data** - Color extraction runs as batch job during data import
-4. **Supabase as sole backend** - Auth + DB + Storage in one platform with RLS
+1. **Unified Binder Builder Architecture** - ChromaDex and Michi Mode share ONE canvas editor with two entry points. Users can blend approaches, algorithm output is always editable.
+2. **Extended Slot Model** - `binder_slots` includes `content_type`, `span_cols`, `span_rows`, `custom_image_url`, `crop_data` for Michi features.
+3. **Variants only in Master Set Tracker** - Browse shows unique cards only to keep counts accurate
+4. **Shared filter system** - ONE reusable filter component/hook/store used by Browse, Builder, and ChromaDex
+5. **Pre-computed ChromaDex data** - Color extraction runs as batch job during data import
+6. **Supabase as sole backend** - Auth + DB + Storage in one platform with RLS
 
 ## Data Source
 
@@ -143,9 +180,9 @@ master_set_preferences: id, user_id, set_id, slot_config, include_promos, includ
 
 - JSON files for all cards/sets
 - Downloaded and processed locally (not API) to avoid rate limits
-- Card IDs format: `{setId}-{number}` (e.g., 'sv1-1', 'mee1-25')
+- Card IDs format: `{setId}-{number}` (e.g., 'me1-1', 'me2-25')
 
-**Initial Target Sets**: Mega Evolution Base Set & Phantasmal Flames (2025 series)
+**Initial Target Sets**: Mega Evolution Base Set (me1) & Phantasmal Flames (me2)
 
 **Premium Card Identification**:
 - Mega Evolution & S/V: `isPremium = true` for 'Illustration Rare', 'Special Illustration Rare'
@@ -170,33 +207,42 @@ master_set_preferences: id, user_id, set_id, slot_config, include_promos, includ
 | Feature | Guest | Free | Pro ($4.99/mo) |
 |---------|-------|------|----------------|
 | Browse Cards | Yes | Yes | Yes |
+| Card Search & Filters | Yes | Yes | Yes |
 | Master Set Trackers | 1 | 1 | Unlimited |
 | Custom Binders | 1 (10 pages) | 1 (10 pages) | Unlimited |
-| ChromaDex | No | 3/month | Unlimited |
-| Basic Export (CSV) | No | Yes | Yes |
-| Premium Export (PDF) | No | No | Yes |
-| Import | No | Yes | Yes |
+| Slot Merging (Full-Art Spreads) | No | Yes | Yes |
+| Custom Image Upload | No | 5 total | Unlimited |
+| ChromaDex Generation | No | 3/month | Unlimited |
+| Templates | Basic | Basic | All |
+| Basic Export (CSV/PNG) | No | Yes | Yes |
+| Premium Export (PDF/Social) | No | No | Yes |
+| Import (TCGPlayer, Collectr) | No | Yes | Yes |
+| Public Binder Sharing | No | Yes | Yes |
 | Ads | Yes | Yes | No |
 
-## Development Phases
+**Pricing Options:**
+- Pro Monthly: $4.99/month
+- Pro Yearly: $39.99/year (33% savings)
 
-| Phase | Focus | Key Deliverables |
-|-------|-------|------------------|
-| 0 | Foundation | Next.js, Supabase, Auth, CI/CD, Data pipeline |
-| 1 | Card Browser | Grid view, shared filters, search, card modal |
-| 2 | Master Set Tracker | Visual binder, preferences, progress, variants |
-| 3 | Binder Builder | Split-panel, card picker, drag-drop |
-| 4 | ChromaDex | Color extraction, generation UI |
-| 5 | Export/Import | CSV, PDF, TCGPlayer/Collectr parsers |
-| 6 | Community | Gallery, sharing, curated binders, polish |
-| 7 | Launch | Stripe, feature gating, ads |
+## Development Phases (21 weeks)
+
+| Phase | Weeks | Focus | Key Deliverables |
+|-------|-------|-------|------------------|
+| 0 | 1-2 | Foundation | Next.js, Supabase, Auth, CI/CD, Data pipeline |
+| 1 | 3-4 | Card Browser | Grid view, shared filters, search, card modal |
+| 2 | 5-7 | Master Set Tracker | Visual binder, preferences, progress, variants |
+| 3 | 8-11 | Unified Builder Core | Canvas editor, card picker, drag-drop, Michi features (slot merging, custom upload) |
+| 4 | 12-14 | ChromaDex Integration | Color extraction pipeline, generation algorithm, in-canvas UI |
+| 5 | 15-16 | Export/Import | CSV, PNG, PDF generation, TCGPlayer/Collectr parsers |
+| 6 | 17-19 | Community | Gallery, sharing, templates library, social export |
+| 7 | 20-21 | Launch | Stripe, feature gating, ads, launch prep |
 
 ## Git Conventions
 
 **Branch Strategy**:
 - `main` - production (protected, always deployable)
 - `develop` - integration branch for ongoing work
-- `feature/*` - feature development (e.g., `feature/card-browser`, `feature/chromadex-ui`)
+- `feature/*` - feature development (e.g., `feature/card-browser`, `feature/unified-builder`)
 - `hotfix/*` - emergency production fixes
 
 **Workflow**:
@@ -234,7 +280,7 @@ test: description          # Tests
 chore: description         # Maintenance
 ```
 
-**Scopes**: `auth`, `db`, `cards`, `binder`, `chromadex`, `filters`, `export`, `ui`, `api`
+**Scopes**: `auth`, `db`, `cards`, `binder`, `chromadex`, `michi`, `filters`, `export`, `ui`, `api`
 
 ## UI & Styling Guidelines
 
@@ -275,6 +321,7 @@ chore: description         # Maintenance
 6. **URL sync for filters** - filters should be shareable via URL params
 7. **Magic UI first** - always use Magic UI components before falling back to plain Tailwind CSS
 8. **Use binderdex-bug-fixer agent** - when user reports errors or bugs, use this agent to diagnose and fix
+9. **Unified Builder architecture** - ChromaDex and Michi share the same canvas editor
 
 ## Environment Variables
 
@@ -284,7 +331,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
-DATABASE_URL
+NEXT_PUBLIC_SITE_URL
 ```
 
 ## Performance Targets

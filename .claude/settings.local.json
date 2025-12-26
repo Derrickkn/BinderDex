@@ -24,11 +24,19 @@
       "Bash(git branch:*)",
       "Bash(git checkout:*)",
       "Bash(npx create-next-app@14:*)",
-      "Bash(xcopy /E /H /Y \"C:\\\\binderdex-temp\\\\*\" \"C:\\\\BinderDex\"\" && rmdir /S /Q \"C:binderdex-temp \")",
+      "Bash(xcopy:*)",
       "Bash(npm install:*)",
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(curl:*)",
+      "Bash(git push:*)",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__generate_typescript_types",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx tsx:*)",
+      "Bash(git clone:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
