@@ -13,6 +13,9 @@ import {
   BinderView,
   CardDetailModal,
   MissingCardsList,
+  CoachMarks,
+  HelpOverlay,
+  type CoachMarkStep,
 } from "@/components/tracker";
 import { calculateProgress } from "@/lib/tracker/utils";
 import { CollectionEntryUpdate } from "@/lib/types/tracker";
@@ -20,6 +23,9 @@ import { CollectionEntryUpdate } from "@/lib/types/tracker";
 export default function TrackerSetPage() {
   const params = useParams();
   const setId = params.setId as string;
+
+  // Coach marks restart function
+  const [restartCoachMarks, setRestartCoachMarks] = useState<(() => void) | null>(null);
 
   // UI state
   const { preferences, selectedVariantId, isModalOpen, openModal, closeModal } = useTrackerStore();
@@ -36,18 +42,62 @@ export default function TrackerSetPage() {
   });
 
   // Fetch and sync preferences
-  const { updatePreferences, isUpdating: isUpdatingPreferences } = useTrackerPreferences(setId);
+  const { data: serverPreferences, isLoading: isLoadingPreferences, updatePreferences, isUpdating: isUpdatingPreferences } = useTrackerPreferences(setId);
+
+  // Use server preferences if available, fall back to store preferences
+  // This prevents layout shift when serverPreferences loads after initial render
+  const currentPreferences = serverPreferences || preferences;
 
   // Fetch cards with variants
-  const { data: cards, isLoading: isLoadingCards } = useSetVariants(setId, preferences);
+  const { data: cards, isLoading: isLoadingCards } = useSetVariants(setId, currentPreferences);
 
-  // Mutations - pass preferences so they use the same query key as useSetVariants
-  const toggleOwned = useToggleOwned(setId, preferences);
-  const updateCollection = useUpdateCollectionEntry(setId, preferences);
+  // Mutations - pass currentPreferences so they use the same query key as useSetVariants
+  const toggleOwned = useToggleOwned(setId, currentPreferences);
+  const updateCollection = useUpdateCollectionEntry(setId, currentPreferences);
 
   // Bulk actions
-  const bulkActions = useBulkActions(setId, preferences);
+  const bulkActions = useBulkActions(setId, currentPreferences);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
+
+  // Coach marks configuration
+  const coachMarkSteps: CoachMarkStep[] = [
+    {
+      target: "[data-coach-card-slot]",
+      title: "Track Your Collection",
+      description: "Click any card to mark it as owned or missing.",
+      position: "bottom",
+    },
+    {
+      target: "[data-coach-card-slot]",
+      title: "Card Details",
+      description: "Right-click any card to view detailed information and manage your collection.",
+      position: "bottom",
+    },
+    {
+      target: "[data-coach-navigation]",
+      title: "Navigate Your Binder",
+      description: "Browse pages with these arrows or use your keyboard's ← → keys for quick navigation.",
+      position: "top",
+    },
+    {
+      target: "[data-coach-quick-fill]",
+      title: "Quick Fill",
+      description: "Quickly mark entire rarities as owned.",
+      position: "bottom",
+    },
+    {
+      target: "[data-coach-missing-cards]",
+      title: "Find Missing Cards",
+      description: "Click any missing card to jump directly to its slot in the binder.",
+      position: "top",
+    },
+    {
+      target: "[data-coach-export]",
+      title: "Export Options",
+      description: "Export your missing cards list to PDF or Excel for easy reference while shopping.",
+      position: "top",
+    },
+  ];
 
   // Calculate progress
   const progress = useMemo(() => {
@@ -62,7 +112,7 @@ export default function TrackerSetPage() {
   }, [selectedVariantId, cards]);
 
   // Handle preference changes (updatePreferences handles both local store + server save)
-  const handleSlotConfigChange = (config: typeof preferences.slotConfig) => {
+  const handleSlotConfigChange = (config: typeof currentPreferences.slotConfig) => {
     updatePreferences({ slotConfig: config });
   };
 
@@ -123,22 +173,29 @@ export default function TrackerSetPage() {
     }
   };
 
-  // Loading state
-  if (isLoadingSet || !set) {
+  // Loading state - wait for both set and preferences to load
+  if (isLoadingSet || !set || isLoadingPreferences || !serverPreferences) {
     return (
       <div className="min-h-screen bg-[#0a0a0a]">
         <TrackerHeaderSkeleton />
         <main className="container mx-auto">
-          <div className="p-4">
-            <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-[2.5/3.5] rounded-lg bg-zinc-800 animate-pulse"
-                />
-              ))}
+          {/* Only show skeleton if we have server preferences (prevents layout shift) */}
+          {serverPreferences ? (
+            <BinderView
+              cards={[]}
+              slotConfig={serverPreferences.slotConfig}
+              onToggleCard={() => {}}
+              onOpenCardDetail={() => {}}
+              isLoading={true}
+            />
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-zinc-700 border-r-transparent"></div>
+                <p className="mt-4 text-sm text-zinc-500">Loading tracker...</p>
+              </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
     );
@@ -154,10 +211,10 @@ export default function TrackerSetPage() {
 
       {/* Toolbar with Quick Fill, Slot Config, Toggles */}
       <TrackerToolbar
-        slotConfig={preferences.slotConfig}
+        slotConfig={currentPreferences.slotConfig}
         onSlotConfigChange={handleSlotConfigChange}
-        includePromos={preferences.includePromos}
-        includeReverseHolos={preferences.includeReverseHolos}
+        includePromos={currentPreferences.includePromos}
+        includeReverseHolos={currentPreferences.includeReverseHolos}
         onIncludePromosChange={handleIncludePromosChange}
         onIncludeReverseHolosChange={handleIncludeReverseHolosChange}
         rarities={bulkActions.rarities}
@@ -171,10 +228,10 @@ export default function TrackerSetPage() {
       />
 
       {/* Main binder view */}
-      <main className="container mx-auto">
+      <main className="container mx-auto pb-8">
         <BinderView
           cards={cards || []}
-          slotConfig={preferences.slotConfig}
+          slotConfig={currentPreferences.slotConfig}
           onToggleCard={handleToggleCard}
           onOpenCardDetail={openModal}
           isLoading={isLoadingCards}
@@ -187,7 +244,7 @@ export default function TrackerSetPage() {
             setId={setId}
             setName={set.name}
             onCardClick={openModal}
-            slotConfig={preferences.slotConfig}
+            slotConfig={currentPreferences.slotConfig}
             totalCardsInSet={set.printed_total}
           />
         )}
@@ -200,6 +257,22 @@ export default function TrackerSetPage() {
         onClose={closeModal}
         onSave={handleSaveCardDetail}
         isSaving={updateCollection.isPending}
+      />
+
+      {/* Coach marks tutorial */}
+      <CoachMarks
+        steps={coachMarkSteps}
+        storageKey="hasSeenTrackerTutorial"
+        onRestart={(restartFn) => setRestartCoachMarks(() => restartFn)}
+      />
+
+      {/* Help overlay - now triggers coach marks restart */}
+      <HelpOverlay
+        onRestartTutorial={() => {
+          if (restartCoachMarks) {
+            restartCoachMarks();
+          }
+        }}
       />
     </div>
   );

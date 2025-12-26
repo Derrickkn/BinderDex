@@ -23,6 +23,7 @@ export function ExportButtons({ cards, setId, setName, totalCardsInSet }: Export
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [printReady, setPrintReady] = useState(false);
+  const [listColumns, setListColumns] = useState<1 | 2>(2); // Default to 2 columns to save paper
   const settingsRef = useRef<HTMLDivElement>(null);
 
   const missingCards = getMissingCards(cards);
@@ -76,14 +77,14 @@ export function ExportButtons({ cards, setId, setName, totalCardsInSet }: Export
     setIsExporting("pdf-simple");
     try {
       const exportData = formatMissingCardsForExport(missingCards, setId);
-      generateMissingCardsPDFSimple(exportData, setName, totalCardsInSet);
+      generateMissingCardsPDFSimple(exportData, setName, totalCardsInSet, listColumns);
     } finally {
       setIsExporting(null);
     }
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div data-coach-export className="flex flex-wrap items-center gap-1.5">
       {/* PDF with Images */}
       <ExportButton
         onClick={handleExportPDFWithImages}
@@ -175,6 +176,43 @@ export function ExportButtons({ cards, setId, setName, totalCardsInSet }: Export
                   </span>
                 </div>
               )}
+
+              {/* Divider */}
+              <div className="border-t border-zinc-800" />
+
+              {/* List column layout option */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-medium text-zinc-300">List Export Layout</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setListColumns(1)}
+                    className={cn(
+                      "flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors border",
+                      listColumns === 1
+                        ? "bg-emerald-900/30 border-emerald-700 text-emerald-300"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-750"
+                    )}
+                  >
+                    1 Column
+                  </button>
+                  <button
+                    onClick={() => setListColumns(2)}
+                    className={cn(
+                      "flex-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors border",
+                      listColumns === 2
+                        ? "bg-emerald-900/30 border-emerald-700 text-emerald-300"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-750"
+                    )}
+                  >
+                    2 Columns
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-500 mt-1">
+                  {listColumns === 1
+                    ? "Easier to read, uses more paper"
+                    : "Saves paper, more compact layout"}
+                </p>
+              </div>
             </div>
           </div>
         )}

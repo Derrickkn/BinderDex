@@ -37,7 +37,20 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(npx tsx:*)",
       "Bash(git clone:*)",
-      "Bash(npm run test:run:*)"
+      "Bash(npm run test:run:*)",
+      "Bash(npx jsonlint-cli)",
+      "Bash(node -e:*)",
+      "mcp__supabase__get_project",
+      "Bash(timeout /t 5)",
+      "Bash(ping:*)",
+      "Bash(taskkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout /t 3)",
+      "Bash(npm ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "Bash(timeout 15 npm run dev:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

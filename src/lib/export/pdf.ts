@@ -45,28 +45,28 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
  * Draw the BinderDex logo (simplified binder icon + text)
  */
 function drawLogo(doc: jsPDF, x: number, y: number, scale: number = 1): number {
-  // Logo dimensions
-  const spineWidth = 1.5 * scale;
-  const cellWidth = 4 * scale;
-  const cellHeight = 4.5 * scale; // Slightly taller than wide (card shape)
-  const cellGap = 0.4 * scale;
-  const spineGap = 0.8 * scale;
+  // Logo dimensions - reduced icon size for better proportion with text
+  const spineWidth = 1.2 * scale;
+  const cellWidth = 3 * scale;  // Reduced from 4
+  const cellHeight = 3.5 * scale; // Reduced from 4.5
+  const cellGap = 0.3 * scale;  // Reduced from 0.4
+  const spineGap = 0.6 * scale; // Reduced from 0.8
 
   const gridWidth = 3 * cellWidth + 2 * cellGap;
   const gridHeight = 3 * cellHeight + 2 * cellGap;
 
-  // Binder spine
-  doc.setFillColor(31, 41, 55); // gray-800
+  // Binder spine - matching website #374151 (gray-700)
+  doc.setFillColor(55, 65, 81);
   doc.roundedRect(x, y, spineWidth, gridHeight, 0.3, 0.3, "F");
 
   // Grid cells with colors matching the logo exactly
-  // Row 1: gray-700, gray-600, indigo-500
-  // Row 2: gray-600, pink-500, gray-600
-  // Row 3: amber-500, gray-600, gray-700
+  // Row 1: gray-700 #4B5563, gray-600 #6B7280, indigo-500 #6366F1
+  // Row 2: gray-600 #6B7280, pink-500 #EC4899, gray-600 #6B7280
+  // Row 3: amber-500 #F59E0B, gray-600 #6B7280, gray-700 #4B5563
   const colors: [number, number, number][][] = [
-    [[55, 65, 81], [75, 85, 99], [99, 102, 241]],   // Row 1
-    [[75, 85, 99], [236, 72, 153], [75, 85, 99]],   // Row 2
-    [[245, 158, 11], [75, 85, 99], [55, 65, 81]],   // Row 3
+    [[75, 85, 99], [107, 114, 128], [99, 102, 241]],    // Row 1
+    [[107, 114, 128], [236, 72, 153], [107, 114, 128]], // Row 2
+    [[245, 158, 11], [107, 114, 128], [75, 85, 99]],    // Row 3
   ];
 
   const gridX = x + spineWidth + spineGap;
@@ -75,23 +75,23 @@ function drawLogo(doc: jsPDF, x: number, y: number, scale: number = 1): number {
       const cx = gridX + col * (cellWidth + cellGap);
       const cy = y + row * (cellHeight + cellGap);
       doc.setFillColor(...colors[row][col]);
-      doc.roundedRect(cx, cy, cellWidth, cellHeight, 0.4, 0.4, "F");
+      doc.roundedRect(cx, cy, cellWidth, cellHeight, 0.3, 0.3, "F");
     }
   }
 
-  // Text "BinderDex"
-  const textX = gridX + gridWidth + 3 * scale;
+  // Text "BinderDex" - increased spacing from icon
+  const textX = gridX + gridWidth + 2.5 * scale;
   const textY = y + gridHeight / 2 + 1.5 * scale;
   doc.setFontSize(11 * scale);
   doc.setFont("helvetica", "bold");
 
-  // "Binder" in dark gray
-  doc.setTextColor(55, 65, 81);
+  // "Binder" in light gray to match website (#E5E7EB = zinc-200)
+  doc.setTextColor(229, 231, 235);
   doc.text("Binder", textX, textY);
 
-  // "Dex" in gradient colors (indigo -> pink -> amber, use pink)
+  // "Dex" in indigo-400 (#818CF8) - representing the gradient's primary color
   const binderWidth = doc.getTextWidth("Binder");
-  doc.setTextColor(236, 72, 153); // pink
+  doc.setTextColor(129, 140, 248); // indigo-400
   doc.text("Dex", textX + binderWidth, textY);
 
   // Return the total width used
@@ -361,12 +361,13 @@ function addPageNumberOnly(
 
 /**
  * Generate PDF without images (table format only, faster)
- * Uses 2-column layout for space efficiency
+ * Supports 1-column or 2-column layout
  */
 export function generateMissingCardsPDFSimple(
   cards: ExportCard[],
   setName: string,
-  totalCardsInSet?: number
+  totalCardsInSet?: number,
+  columns: 1 | 2 = 2
 ): void {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -377,7 +378,11 @@ export function generateMissingCardsPDFSimple(
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 8;
   const columnGap = 6;
-  const columnWidth = (pageWidth - 2 * margin - columnGap) / 2;
+
+  // Calculate column width based on number of columns
+  const columnWidth = columns === 1
+    ? pageWidth - 2 * margin
+    : (pageWidth - 2 * margin - columnGap) / 2;
 
   // Format card number as "num/total" (e.g., "1/132")
   const formatCardNum = (cardNumber: string) => {
@@ -395,9 +400,9 @@ export function generateMissingCardsPDFSimple(
     card.variant !== "Normal" ? card.variant : "-",
   ]);
 
-  // Split data into two columns
-  const rowsPerColumn = 45; // Compact rows
-  const rowsPerPage = rowsPerColumn * 2; // Two columns per page
+  // Calculate rows per page based on number of columns
+  const rowsPerColumn = columns === 1 ? 50 : 45; // More rows for single column (no duplicate headers)
+  const rowsPerPage = rowsPerColumn * columns;
   const totalPages = Math.ceil(cards.length / rowsPerPage);
 
   let currentPage = 1;
@@ -417,68 +422,103 @@ export function generateMissingCardsPDFSimple(
       startY = 14;
     }
 
-    // Left column
-    const leftColumnData = tableData.slice(dataIndex, dataIndex + rowsPerColumn);
-    if (leftColumnData.length > 0) {
-      autoTable(doc, {
-        startY: startY,
-        head: [["#", "Card Name", "Rarity", "Variant"]],
-        body: leftColumnData,
-        margin: { left: margin, right: pageWidth - margin - columnWidth },
-        tableWidth: columnWidth,
-        styles: {
-          fontSize: 7,
-          cellPadding: 1,
-          overflow: "ellipsize",
-        },
-        headStyles: {
-          fillColor: [80, 80, 80],
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-          fontSize: 7,
-        },
-        alternateRowStyles: {
-          fillColor: [250, 250, 250],
-        },
-        columnStyles: {
-          0: { cellWidth: 14 },      // # (e.g., "1/132")
-          1: { cellWidth: "auto" },  // Card Name
-          2: { cellWidth: 18 },      // Rarity
-          3: { cellWidth: 16 },      // Variant
-        },
-      });
-    }
+    if (columns === 1) {
+      // Single column layout
+      const columnData = tableData.slice(dataIndex, dataIndex + rowsPerPage);
+      if (columnData.length > 0) {
+        autoTable(doc, {
+          startY: startY,
+          head: [["#", "Card Name", "Rarity", "Variant"]],
+          body: columnData,
+          margin: { left: margin, right: margin },
+          tableWidth: columnWidth,
+          styles: {
+            fontSize: 8,
+            cellPadding: 1.5,
+            overflow: "ellipsize",
+          },
+          headStyles: {
+            fillColor: [80, 80, 80],
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+            fontSize: 8,
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 250],
+          },
+          columnStyles: {
+            0: { cellWidth: 18 },      // # (e.g., "1/132") - wider for single column
+            1: { cellWidth: "auto" },  // Card Name
+            2: { cellWidth: 24 },      // Rarity - wider for single column
+            3: { cellWidth: 22 },      // Variant - wider for single column
+          },
+        });
+      }
+    } else {
+      // Two column layout
+      // Left column
+      const leftColumnData = tableData.slice(dataIndex, dataIndex + rowsPerColumn);
+      if (leftColumnData.length > 0) {
+        autoTable(doc, {
+          startY: startY,
+          head: [["#", "Card Name", "Rarity", "Variant"]],
+          body: leftColumnData,
+          margin: { left: margin, right: pageWidth - margin - columnWidth },
+          tableWidth: columnWidth,
+          styles: {
+            fontSize: 7,
+            cellPadding: 1,
+            overflow: "ellipsize",
+          },
+          headStyles: {
+            fillColor: [80, 80, 80],
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+            fontSize: 7,
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 250],
+          },
+          columnStyles: {
+            0: { cellWidth: 14 },      // # (e.g., "1/132")
+            1: { cellWidth: "auto" },  // Card Name
+            2: { cellWidth: 18 },      // Rarity
+            3: { cellWidth: 16 },      // Variant
+          },
+        });
+      }
 
-    // Right column
-    const rightColumnData = tableData.slice(dataIndex + rowsPerColumn, dataIndex + rowsPerPage);
-    if (rightColumnData.length > 0) {
-      autoTable(doc, {
-        startY: startY,
-        head: [["#", "Card Name", "Rarity", "Variant"]],
-        body: rightColumnData,
-        margin: { left: margin + columnWidth + columnGap, right: margin },
-        tableWidth: columnWidth,
-        styles: {
-          fontSize: 7,
-          cellPadding: 1,
-          overflow: "ellipsize",
-        },
-        headStyles: {
-          fillColor: [80, 80, 80],
-          textColor: [255, 255, 255],
-          fontStyle: "bold",
-          fontSize: 7,
-        },
-        alternateRowStyles: {
-          fillColor: [250, 250, 250],
-        },
-        columnStyles: {
-          0: { cellWidth: 14 },      // # (e.g., "1/132")
-          1: { cellWidth: "auto" },  // Card Name
-          2: { cellWidth: 18 },      // Rarity
-          3: { cellWidth: 16 },      // Variant
-        },
-      });
+      // Right column
+      const rightColumnData = tableData.slice(dataIndex + rowsPerColumn, dataIndex + rowsPerPage);
+      if (rightColumnData.length > 0) {
+        autoTable(doc, {
+          startY: startY,
+          head: [["#", "Card Name", "Rarity", "Variant"]],
+          body: rightColumnData,
+          margin: { left: margin + columnWidth + columnGap, right: margin },
+          tableWidth: columnWidth,
+          styles: {
+            fontSize: 7,
+            cellPadding: 1,
+            overflow: "ellipsize",
+          },
+          headStyles: {
+            fillColor: [80, 80, 80],
+            textColor: [255, 255, 255],
+            fontStyle: "bold",
+            fontSize: 7,
+          },
+          alternateRowStyles: {
+            fillColor: [250, 250, 250],
+          },
+          columnStyles: {
+            0: { cellWidth: 14 },      // # (e.g., "1/132")
+            1: { cellWidth: "auto" },  // Card Name
+            2: { cellWidth: 18 },      // Rarity
+            3: { cellWidth: 16 },      // Variant
+          },
+        });
+      }
     }
 
     dataIndex += rowsPerPage;

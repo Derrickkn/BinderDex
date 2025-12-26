@@ -4,12 +4,13 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import { TrackerCard, SlotConfig } from "@/lib/types/tracker";
 import { formatVariantType, getMissingCards, getViewForCard } from "@/lib/tracker/utils";
-import { ChevronDown, ChevronUp, ArrowUpDown } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ExportButtons } from "./ExportButtons";
 import { useTrackerStore } from "@/hooks/useTrackerStore";
 
-type SortOption = "number" | "rarity" | "name";
+type SortField = "number" | "rarity" | "name";
+type SortDirection = "asc" | "desc";
 
 // Rarity order for sorting (most common to rarest)
 const RARITY_ORDER: Record<string, number> = {
@@ -48,7 +49,8 @@ export function MissingCardsList({
   totalCardsInSet,
 }: MissingCardsListProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [sortBy, setSortBy] = useState<SortOption>("number");
+  const [sortField, setSortField] = useState<SortField>("number");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -70,9 +72,12 @@ export function MissingCardsList({
   // Sort missing cards based on selected option
   const sortedMissingCards = useMemo(() => {
     const sorted = [...missingCards];
-    switch (sortBy) {
+
+    let result: TrackerCard[];
+
+    switch (sortField) {
       case "number":
-        return sorted.sort((a, b) => {
+        result = sorted.sort((a, b) => {
           const numA = parseInt(a.number, 10);
           const numB = parseInt(b.number, 10);
           if (!isNaN(numA) && !isNaN(numB)) {
@@ -80,8 +85,9 @@ export function MissingCardsList({
           }
           return a.number.localeCompare(b.number, undefined, { numeric: true });
         });
+        break;
       case "rarity":
-        return sorted.sort((a, b) => {
+        result = sorted.sort((a, b) => {
           const orderA = a.rarity ? (RARITY_ORDER[a.rarity] ?? 50) : 100;
           const orderB = b.rarity ? (RARITY_ORDER[b.rarity] ?? 50) : 100;
           if (orderA !== orderB) return orderA - orderB;
@@ -91,12 +97,17 @@ export function MissingCardsList({
           if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
           return a.number.localeCompare(b.number, undefined, { numeric: true });
         });
+        break;
       case "name":
-        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+        result = sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
       default:
-        return sorted;
+        result = sorted;
     }
-  }, [missingCards, sortBy]);
+
+    // Reverse if descending
+    return sortDirection === 'desc' ? result.reverse() : result;
+  }, [missingCards, sortField, sortDirection]);
 
   // Handle card left-click - navigate to page and highlight (no modal)
   const handleCardNavigate = (card: TrackerCard) => {
@@ -125,11 +136,30 @@ export function MissingCardsList({
     onCardClick?.(card.variant_id);
   };
 
-  const sortLabels: Record<SortOption, string> = {
-    number: "Number",
-    rarity: "Rarity",
-    name: "Name",
+  // Handle sort option click - toggle direction if same field is clicked
+  const handleSortClick = (field: SortField) => {
+    if (field === sortField) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Switch to new field with ascending as default
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortDropdownOpen(false);
   };
+
+  // Sort option display configuration
+  const sortOptions: Array<{ value: SortField; label: string }> = [
+    { value: "number", label: "Number" },
+    { value: "rarity", label: "Rarity" },
+    { value: "name", label: "Name" },
+  ];
+
+  const currentSortLabel = sortOptions.find(opt => opt.value === sortField)?.label || "Number";
+  const currentSortIcon = sortDirection === "asc"
+    ? <ArrowUp className="h-3 w-3" />
+    : <ArrowDown className="h-3 w-3" />;
 
   if (missingCards.length === 0) {
     return (
@@ -144,7 +174,7 @@ export function MissingCardsList({
   }
 
   return (
-    <div className="border-t border-zinc-800 bg-zinc-900/50">
+    <div data-coach-missing-cards className="border-t border-zinc-800 bg-zinc-900/50">
       {/* Consolidated header row */}
       <div className="flex items-center gap-2 px-4 py-3">
         {/* Missing Cards count */}
@@ -158,32 +188,34 @@ export function MissingCardsList({
             onClick={() => setSortDropdownOpen(!sortDropdownOpen)}
             className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
           >
-            <ArrowUpDown className="h-3 w-3" />
             <span className="hidden sm:inline">Sort:</span>
-            <span>{sortLabels[sortBy]}</span>
+            <span>{currentSortLabel}</span>
+            {currentSortIcon}
             <ChevronDown className={cn(
-              "h-3 w-3 transition-transform",
+              "h-3 w-3 transition-transform ml-0.5",
               sortDropdownOpen && "rotate-180"
             )} />
           </button>
 
           {sortDropdownOpen && (
-            <div className="absolute left-0 top-full mt-1 z-50 w-32 rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl overflow-hidden">
-              {(["number", "rarity", "name"] as SortOption[]).map((option) => (
+            <div className="absolute left-0 top-full mt-1 z-50 min-w-[140px] rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl overflow-hidden">
+              {sortOptions.map((option) => (
                 <button
-                  key={option}
-                  onClick={() => {
-                    setSortBy(option);
-                    setSortDropdownOpen(false);
-                  }}
+                  key={option.value}
+                  onClick={() => handleSortClick(option.value)}
                   className={cn(
-                    "w-full px-3 py-2 text-left text-xs transition-colors",
-                    sortBy === option
+                    "w-full px-3 py-2 text-left text-xs transition-colors flex items-center gap-2",
+                    sortField === option.value
                       ? "bg-zinc-800 text-white"
                       : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-300"
                   )}
                 >
-                  {sortLabels[option]}
+                  <span className="flex-1">{option.label}</span>
+                  {sortField === option.value && (
+                    sortDirection === "asc"
+                      ? <ArrowUp className="h-3 w-3" />
+                      : <ArrowDown className="h-3 w-3" />
+                  )}
                 </button>
               ))}
             </div>
@@ -200,10 +232,11 @@ export function MissingCardsList({
           </div>
         )}
 
-        {/* Collapse toggle */}
+        {/* Collapse toggle button */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center justify-center h-7 w-7 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          className="flex items-center justify-center h-7 w-7 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800 rounded transition-colors"
+          aria-label={isExpanded ? "Collapse missing cards" : "Expand missing cards"}
         >
           {isExpanded ? (
             <ChevronUp className="h-4 w-4" />
@@ -213,29 +246,32 @@ export function MissingCardsList({
         </button>
       </div>
 
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="border-t border-zinc-800/50">
-          {/* Mobile export buttons */}
-          <div className="sm:hidden px-4 py-2 border-b border-zinc-800/50">
-            <ExportButtons cards={cards} setId={setId} setName={setName} totalCardsInSet={totalCardsInSet} />
-          </div>
+      {/* Expanded content - with animation */}
+      <div
+        className={cn(
+          "border-t border-zinc-800/50 overflow-hidden transition-all duration-300 ease-in-out",
+          isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        {/* Mobile export buttons */}
+        <div className="sm:hidden px-4 py-2 border-b border-zinc-800/50">
+          <ExportButtons cards={cards} setId={setId} setName={setName} totalCardsInSet={totalCardsInSet} />
+        </div>
 
-          {/* Card grid */}
-          <div className="max-h-64 overflow-y-auto px-4 py-3">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {sortedMissingCards.map((card) => (
-                <MissingCardItem
-                  key={card.variant_id}
-                  card={card}
-                  onClick={() => handleCardNavigate(card)}
-                  onRightClick={(e) => handleCardDetail(card, e)}
-                />
-              ))}
-            </div>
+        {/* Card grid - custom scrollbar styling */}
+        <div className="max-h-64 overflow-y-auto px-4 py-3 pb-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700 hover:scrollbar-thumb-zinc-600">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+            {sortedMissingCards.map((card) => (
+              <MissingCardItem
+                key={card.variant_id}
+                card={card}
+                onClick={() => handleCardNavigate(card)}
+                onRightClick={(e) => handleCardDetail(card, e)}
+              />
+            ))}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

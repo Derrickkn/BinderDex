@@ -11,3 +11,5 @@ export { CardDetailModal } from "./CardDetailModal";
 export { MissingCardsList, MissingCardsCount } from "./MissingCardsList";
 export { BulkActions } from "./BulkActions";
 export { ExportButtons } from "./ExportButtons";
+export { CoachMarks, type CoachMarkStep } from "./CoachMarks";
+export { HelpOverlay } from "./HelpOverlay";

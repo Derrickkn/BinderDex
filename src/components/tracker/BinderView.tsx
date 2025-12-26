@@ -19,7 +19,13 @@ interface BinderViewProps {
 
 // Hook to detect if we're on desktop
 function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(false);
+  // Initialize with a check if window is defined (SSR-safe)
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 1024;
+    }
+    return true; // Default to desktop layout during SSR to prevent layout shift
+  });
 
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
@@ -130,6 +136,7 @@ export function BinderView({
       <div className="hidden lg:flex w-full max-w-7xl px-4 items-center gap-2">
         {/* Previous spread button */}
         <button
+          data-coach-navigation
           onClick={prevPage}
           disabled={!canGoPrev}
           className={cn(
@@ -199,6 +206,7 @@ export function BinderView({
 
         {/* Next spread button */}
         <button
+          data-coach-navigation
           onClick={() => nextPage(totalViews)}
           disabled={!canGoNext}
           className={cn(

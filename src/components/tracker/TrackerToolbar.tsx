@@ -108,16 +108,18 @@ export function TrackerToolbar({
 
   const sortedRarities = sortRarities(rarities);
 
-  // Update dropdown position when opened
-  useEffect(() => {
-    if (quickFillOpen && buttonRef.current) {
+  // Handle opening dropdown with immediate position calculation
+  const handleToggleDropdown = () => {
+    if (!quickFillOpen && buttonRef.current) {
+      // Calculate position BEFORE opening to prevent flash
       const rect = buttonRef.current.getBoundingClientRect();
       setDropdownPosition({
         top: rect.bottom + 4,
         left: rect.left,
       });
     }
-  }, [quickFillOpen]);
+    setQuickFillOpen(!quickFillOpen);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -187,8 +189,9 @@ export function TrackerToolbar({
           <div className="flex items-center gap-1 py-1.5">
             {/* Quick Fill Button */}
             <button
+              data-coach-quick-fill
               ref={buttonRef}
-              onClick={() => setQuickFillOpen(!quickFillOpen)}
+              onClick={handleToggleDropdown}
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium",
                 "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white",

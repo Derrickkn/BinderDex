@@ -44,30 +44,32 @@ export function TrackerHeader({
             )}
           </div>
 
-          {/* Set details */}
+          {/* Set details with inline progress */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-semibold text-white truncate">{set.name}</h1>
-            <p className="text-xs text-zinc-500 truncate">
-              {set.era} • {set.series}
-            </p>
-          </div>
-
-          {/* Progress indicator */}
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
-            <div className="w-24 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-zinc-500 to-zinc-400 transition-all duration-300"
-                style={{ width: `${progress.percentage}%` }}
-              />
+            {/* Set name and progress in one line */}
+            <div className="flex items-center gap-2 mb-0.5">
+              <h1 className="text-sm font-semibold text-white truncate">{set.name}</h1>
+              <span className="text-xs text-zinc-500 shrink-0">·</span>
+              <span className="text-xs text-zinc-400 tabular-nums shrink-0">
+                {progress.ownedCards}/{progress.totalCards}
+              </span>
+              <span className="text-xs text-zinc-500 shrink-0">
+                ({progress.percentage}%)
+              </span>
             </div>
-            <span className="text-xs text-zinc-400 tabular-nums">
-              {progress.ownedCards}/{progress.totalCards}
-            </span>
-          </div>
 
-          {/* Mobile progress */}
-          <div className="sm:hidden text-xs text-zinc-400 tabular-nums shrink-0">
-            {progress.percentage}%
+            {/* Era/Series and progress bar */}
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-zinc-500 truncate">
+                {set.era} • {set.series}
+              </p>
+              <div className="hidden sm:block w-32 h-1 rounded-full bg-zinc-800 overflow-hidden shrink-0">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all duration-300"
+                  style={{ width: `${progress.percentage}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

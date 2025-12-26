@@ -22,6 +22,7 @@ export function CardSlot({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
   const lastClickRef = useRef(0);
+  const isContextMenuRef = useRef(false);
 
   const clearTimer = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -32,15 +33,18 @@ export function CardSlot({
 
   const handlePointerDown = useCallback(() => {
     isLongPressRef.current = false;
+    isContextMenuRef.current = false;
     longPressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
       onOpenDetail();
     }, 500);
   }, [onOpenDetail]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
     clearTimer();
-    if (!isLongPressRef.current) {
+    // Only toggle on left-click (button 0), not right-click (button 2)
+    // Also don't toggle if long press triggered
+    if (!isLongPressRef.current && !isContextMenuRef.current && e.button === 0) {
       // Debounce: prevent accidental double-clicks within 150ms
       const now = Date.now();
       if (now - lastClickRef.current < 150) {
@@ -49,15 +53,19 @@ export function CardSlot({
       lastClickRef.current = now;
       onToggle();
     }
+    // Reset context menu flag
+    isContextMenuRef.current = false;
   }, [clearTimer, onToggle]);
 
   const handlePointerCancel = useCallback(() => {
     clearTimer();
     isLongPressRef.current = false;
+    isContextMenuRef.current = false;
   }, [clearTimer]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
+    isContextMenuRef.current = true;
     clearTimer();
     onOpenDetail();
   }, [clearTimer, onOpenDetail]);
@@ -67,6 +75,7 @@ export function CardSlot({
 
   return (
     <div
+      data-coach-card-slot
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
