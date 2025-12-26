@@ -28,14 +28,14 @@ export function TrackerHeader({
           </Link>
 
           {/* Set logo */}
-          <div className="relative h-8 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
+          <div className="relative h-8 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center p-1">
             {set.logo_url ? (
               <Image
                 src={set.logo_url}
                 alt={set.name}
                 width={56}
                 height={32}
-                className="object-contain"
+                className="object-contain max-w-full max-h-full"
               />
             ) : set.symbol_url ? (
               <Image

@@ -83,7 +83,7 @@ export default function TrackerSetPage() {
       target: "[data-coach-quick-fill-dropdown]",
       title: "Quick Fill",
       description: "Quickly mark entire rarities as owned with these buttons.",
-      position: "top",
+      position: "bottom",
     },
     {
       target: "[data-coach-missing-cards]",
