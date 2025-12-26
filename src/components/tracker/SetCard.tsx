@@ -23,9 +23,17 @@ export function SetCard({ set, progress, isTracking = false }: SetCardProps) {
     >
       {/* Set logo and info */}
       <div className="flex items-start gap-3">
-        {/* Set symbol/logo */}
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
-          {set.symbol_url ? (
+        {/* Set logo */}
+        <div className="relative h-12 w-20 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
+          {set.logo_url ? (
+            <Image
+              src={set.logo_url}
+              alt={set.name}
+              width={80}
+              height={48}
+              className="object-contain"
+            />
+          ) : set.symbol_url ? (
             <Image
               src={set.symbol_url}
               alt={set.name}
@@ -46,7 +54,7 @@ export function SetCard({ set, progress, isTracking = false }: SetCardProps) {
             {set.name}
           </h3>
           <p className="text-sm text-zinc-500 truncate">
-            {set.era} • {set.series}
+            {set.era === set.series ? set.era : `${set.era} • ${set.series}`}
           </p>
           <p className="text-xs text-zinc-600 mt-1">
             {set.card_count} cards

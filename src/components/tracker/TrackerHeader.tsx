@@ -28,25 +28,25 @@ export function TrackerHeader({
           </Link>
 
           {/* Set logo */}
-          <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
+          <div className="relative h-8 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
             {set.logo_url ? (
               <Image
                 src={set.logo_url}
                 alt={set.name}
-                width={64}
-                height={40}
+                width={56}
+                height={32}
                 className="object-contain"
               />
             ) : set.symbol_url ? (
               <Image
                 src={set.symbol_url}
                 alt={set.name}
-                width={32}
-                height={32}
+                width={28}
+                height={28}
                 className="object-contain"
               />
             ) : (
-              <span className="text-base font-bold text-zinc-500">
+              <span className="text-sm font-bold text-zinc-500">
                 {set.name.charAt(0)}
               </span>
             )}
