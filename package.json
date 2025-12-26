@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:import": "tsx scripts/import-cards.ts",
+    "db:import:sets": "tsx scripts/import-cards.ts --sets",
+    "db:colors": "tsx scripts/extract-colors.ts",
+    "db:generate-types": "supabase gen types typescript --project-id unwqvvdlmbrppfytpeyo > src/lib/supabase/database.types.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -24,10 +28,13 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "dotenv": "^17.2.3",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
+    "node-vibrant": "^4.0.3",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
