@@ -298,7 +298,30 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
         }}
       />
 
-      {/* Mouse cursor indicator for card steps */}
+      {/* Additional highlight for quick fill button in step 3 */}
+      {step.target === "[data-coach-quick-fill-dropdown]" && (() => {
+        const button = document.querySelector("[data-coach-quick-fill]");
+        if (button) {
+          const buttonRect = button.getBoundingClientRect();
+          return (
+            <div
+              className="fixed z-[101] pointer-events-none"
+              style={{
+                left: buttonRect.left - 4,
+                top: buttonRect.top - 4,
+                width: buttonRect.width + 8,
+                height: buttonRect.height + 8,
+                borderRadius: "8px",
+                border: "2px solid rgba(99, 102, 241, 0.8)",
+                boxShadow: "0 0 20px rgba(99, 102, 241, 0.5)",
+              }}
+            />
+          );
+        }
+        return null;
+      })()}
+
+      {/* Minimalist mouse cursor indicator for card steps */}
       {(currentStep === 0 || currentStep === 1) && (
         <div
           className="fixed z-[102] pointer-events-none"
@@ -308,62 +331,57 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
             transform: "translate(-50%, -50%)",
           }}
         >
-          {/* Mouse cursor SVG - smaller and more subtle */}
+          {/* Minimalist outline mouse cursor */}
           <svg
-            width="32"
-            height="32"
-            viewBox="0 0 48 48"
+            width="28"
+            height="28"
+            viewBox="0 0 40 40"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={cn(
-              "opacity-80",
-              currentStep === 0 ? "animate-click-left" : "animate-click-right"
-            )}
+            className={currentStep === 0 ? "animate-click-left" : "animate-click-right"}
           >
-            {/* Mouse body */}
+            {/* Mouse outline body */}
             <path
-              d="M24 4C18.4772 4 14 8.47715 14 14V28C14 33.5228 18.4772 38 24 38C29.5228 38 34 33.5228 34 28V14C34 8.47715 29.5228 4 24 4Z"
-              fill="rgba(255, 255, 255, 0.9)"
-              stroke="rgba(99, 102, 241, 0.6)"
-              strokeWidth="2"
+              d="M20 6C15.5817 6 12 9.58172 12 14V24C12 28.4183 15.5817 32 20 32C24.4183 32 28 28.4183 28 24V14C28 9.58172 24.4183 6 20 6Z"
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth="1.5"
             />
 
-            {/* Left button - highlighted for step 0 */}
+            {/* Left button shading - darker when pressed (step 0) */}
             <path
-              d="M24 4C18.4772 4 14 8.47715 14 14V20H24V4Z"
-              fill={currentStep === 0 ? "rgba(99, 102, 241, 0.7)" : "rgba(229, 231, 235, 0.5)"}
-              stroke="rgba(99, 102, 241, 0.6)"
-              strokeWidth="2"
-              opacity={currentStep === 0 ? "1" : "0.4"}
+              d="M20 6C15.5817 6 12 9.58172 12 14V18H20V6Z"
+              fill={currentStep === 0 ? "rgba(99, 102, 241, 0.4)" : "none"}
+              stroke="#6366f1"
+              strokeWidth="1.5"
             />
 
-            {/* Right button - highlighted for step 1 */}
+            {/* Right button shading - darker when pressed (step 1) */}
             <path
-              d="M24 4C29.5228 4 34 8.47715 34 14V20H24V4Z"
-              fill={currentStep === 1 ? "rgba(99, 102, 241, 0.7)" : "rgba(229, 231, 235, 0.5)"}
-              stroke="rgba(99, 102, 241, 0.6)"
-              strokeWidth="2"
-              opacity={currentStep === 1 ? "1" : "0.4"}
+              d="M20 6C24.4183 6 28 9.58172 28 14V18H20V6Z"
+              fill={currentStep === 1 ? "rgba(99, 102, 241, 0.4)" : "none"}
             />
 
-            {/* Middle divider */}
+            {/* Center divider line */}
             <line
-              x1="24"
-              y1="4"
-              x2="24"
-              y2="20"
-              stroke="rgba(99, 102, 241, 0.6)"
-              strokeWidth="2"
+              x1="20"
+              y1="6"
+              x2="20"
+              y2="18"
+              stroke="#6366f1"
+              strokeWidth="1.5"
             />
 
             {/* Scroll wheel */}
             <rect
-              x="22"
-              y="12"
+              x="18"
+              y="11"
               width="4"
-              height="6"
+              height="5"
               rx="2"
-              fill="rgba(75, 85, 99, 0.6)"
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth="1.5"
             />
           </svg>
         </div>
