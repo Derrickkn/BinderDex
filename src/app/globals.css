@@ -46,3 +46,78 @@ body {
     @apply bg-[#0a0a0a] text-white;
   }
 }
+
+/* Coach Marks Styles */
+@keyframes click-animation {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(0.95);
+  }
+}
+
+@keyframes coach-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 30px rgba(99, 102, 241, 1),
+      0 0 60px rgba(99, 102, 241, 0.9),
+      0 0 90px rgba(99, 102, 241, 0.7),
+      inset 0 0 20px rgba(99, 102, 241, 0.5);
+    border-color: rgba(99, 102, 241, 1) !important;
+    transform: scale(1.05);
+  }
+  50% {
+    box-shadow:
+      0 0 40px rgba(99, 102, 241, 1),
+      0 0 80px rgba(99, 102, 241, 1),
+      0 0 120px rgba(99, 102, 241, 0.9),
+      inset 0 0 30px rgba(99, 102, 241, 0.7);
+    border-color: rgba(139, 92, 246, 1) !important;
+    transform: scale(1.1);
+  }
+}
+
+.animate-click-left,
+.animate-click-right {
+  animation: click-animation 1.5s ease-in-out infinite;
+}
+
+/* Grey out all cards during step 0 (first click) */
+body[data-coach-step="0"] [data-coach-card-slot] img {
+  filter: grayscale(100%) brightness(0.4) !important;
+  opacity: 0.5 !important;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+/* Highlighted card in step 0 should be in color */
+body[data-coach-step="0"] .coach-card-highlight img {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Step 1 (right-click): grey out all cards except highlighted one (which appears owned) */
+body[data-coach-step="1"] [data-coach-card-slot] img {
+  filter: grayscale(100%) brightness(0.4) !important;
+  opacity: 0.5 !important;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+/* Highlighted card in step 1 should be in color (simulating it was added to collection) */
+body[data-coach-step="1"] .coach-card-highlight img {
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Enhanced glow effect for navigation arrows during step 2 */
+body[data-coach-step="2"] [data-coach-navigation] {
+  animation: coach-glow 1.5s ease-in-out infinite;
+  position: relative;
+  z-index: 103 !important;
+  opacity: 1 !important;
+}
+
+/* Ensure quick fill dropdown is above backdrop during step 3 */
+body[data-coach-step="3"] [data-coach-quick-fill-dropdown] {
+  z-index: 103 !important;
+}

@@ -80,10 +80,10 @@ export default function TrackerSetPage() {
       position: "top",
     },
     {
-      target: "[data-coach-quick-fill]",
+      target: "[data-coach-quick-fill-dropdown]",
       title: "Quick Fill",
-      description: "Quickly mark entire rarities as owned.",
-      position: "bottom",
+      description: "Quickly mark entire rarities as owned with these buttons.",
+      position: "top",
     },
     {
       target: "[data-coach-missing-cards]",
@@ -94,7 +94,7 @@ export default function TrackerSetPage() {
     {
       target: "[data-coach-export]",
       title: "Export Options",
-      description: "Export your missing cards list to PDF or Excel for easy reference while shopping.",
+      description: "Export your missing cards list to PDF or Excel.",
       position: "top",
     },
   ];
@@ -257,6 +257,7 @@ export default function TrackerSetPage() {
         onClose={closeModal}
         onSave={handleSaveCardDetail}
         isSaving={updateCollection.isPending}
+        setTotal={set?.printed_total}
       />
 
       {/* Coach marks tutorial */}

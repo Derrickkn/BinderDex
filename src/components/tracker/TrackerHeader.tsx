@@ -27,9 +27,17 @@ export function TrackerHeader({
             <ArrowLeft className="h-4 w-4" />
           </Link>
 
-          {/* Set symbol */}
-          <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
-            {set.symbol_url ? (
+          {/* Set logo */}
+          <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
+            {set.logo_url ? (
+              <Image
+                src={set.logo_url}
+                alt={set.name}
+                width={64}
+                height={40}
+                className="object-contain"
+              />
+            ) : set.symbol_url ? (
               <Image
                 src={set.symbol_url}
                 alt={set.name}
@@ -61,7 +69,7 @@ export function TrackerHeader({
             {/* Era/Series and progress bar */}
             <div className="flex items-center gap-2">
               <p className="text-xs text-zinc-500 truncate">
-                {set.era} • {set.series}
+                {set.era === set.series ? set.era : `${set.era} • ${set.series}`}
               </p>
               <div className="hidden sm:block w-32 h-1 rounded-full bg-zinc-800 overflow-hidden shrink-0">
                 <div

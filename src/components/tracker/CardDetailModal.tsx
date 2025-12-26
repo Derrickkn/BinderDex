@@ -14,6 +14,7 @@ interface CardDetailModalProps {
   onClose: () => void;
   onSave: (data: CollectionEntryUpdate) => void;
   isSaving?: boolean;
+  setTotal?: number;
 }
 
 export function CardDetailModal({
@@ -22,14 +23,13 @@ export function CardDetailModal({
   onClose,
   onSave,
   isSaving = false,
+  setTotal,
 }: CardDetailModalProps) {
-  const [notes, setNotes] = useState("");
   const [isOwned, setIsOwned] = useState(false);
 
   // Reset form when card changes
   useEffect(() => {
     if (card) {
-      setNotes(card.notes || "");
       setIsOwned(card.owned && card.quantity > 0);
     }
   }, [card]);
@@ -38,7 +38,7 @@ export function CardDetailModal({
     onSave({
       quantity: isOwned ? 1 : 0,
       condition: null,
-      notes: notes.trim() || null,
+      notes: null,
       acquired_date: null,
     });
     onClose();
@@ -53,8 +53,8 @@ export function CardDetailModal({
       <div className="space-y-5">
         {/* Card image and info */}
         <div className="flex gap-4">
-          {/* Card image */}
-          <div className="relative w-28 shrink-0 aspect-[2.5/3.5] rounded-lg overflow-hidden bg-zinc-800">
+          {/* Card image - larger size */}
+          <div className="relative w-48 shrink-0 aspect-[2.5/3.5] rounded-lg overflow-hidden bg-zinc-800">
             {imageUrl ? (
               <Image
                 src={imageUrl}
@@ -73,7 +73,7 @@ export function CardDetailModal({
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white text-lg truncate">{card.name}</h3>
             <p className="text-sm text-zinc-400 mt-0.5">
-              #{card.number} • {card.rarity || "Unknown"}
+              #{card.number}{setTotal ? `/${setTotal}` : ""} • {card.rarity || "Unknown"}
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-800 text-zinc-300">
@@ -114,20 +114,6 @@ export function CardDetailModal({
               )}
             </div>
           </button>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Notes
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add notes about this card..."
-            rows={3}
-            className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-sm text-white placeholder:text-zinc-500 focus:border-green-500/50 focus:outline-none focus:ring-1 focus:ring-green-500/50 resize-none"
-          />
         </div>
 
         {/* Actions */}

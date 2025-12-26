@@ -62,18 +62,16 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
   useEffect(() => {
     if (isVisible) {
       document.body.classList.add("coach-marks-active");
-      // Add class for card steps (0 and 1)
-      if (currentStep === 0 || currentStep === 1) {
-        document.body.classList.add("coach-card-step");
-      } else {
-        document.body.classList.remove("coach-card-step");
-      }
+      // Add step-specific data attribute for targeting
+      document.body.setAttribute("data-coach-step", currentStep.toString());
     } else {
-      document.body.classList.remove("coach-marks-active", "coach-card-step");
+      document.body.classList.remove("coach-marks-active");
+      document.body.removeAttribute("data-coach-step");
     }
 
     return () => {
-      document.body.classList.remove("coach-marks-active", "coach-card-step");
+      document.body.classList.remove("coach-marks-active");
+      document.body.removeAttribute("data-coach-step");
     };
   }, [isVisible, currentStep]);
 
@@ -84,10 +82,42 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
       // Auto-scroll to target if needed
       const step = steps[currentStep];
       if (step) {
-        const element = document.querySelector(step.target);
-        if (element) {
-          // Smooth scroll to element with some offset for better visibility
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Special handling for quick fill dropdown - click to open it
+        if (step.target === "[data-coach-quick-fill-dropdown]") {
+          const quickFillButton = document.querySelector("[data-coach-quick-fill]") as HTMLButtonElement;
+          if (quickFillButton) {
+            // Wait a bit to ensure the button is ready
+            setTimeout(() => {
+              quickFillButton.click();
+              // Keep checking if dropdown exists and retry if needed
+              const checkDropdown = () => {
+                const dropdown = document.querySelector(step.target);
+                if (dropdown) {
+                  dropdown.scrollIntoView({ behavior: "smooth", block: "center" });
+                  updateTargetPosition();
+                } else {
+                  // Dropdown not found, try clicking again
+                  setTimeout(() => {
+                    quickFillButton.click();
+                    setTimeout(() => {
+                      const retryDropdown = document.querySelector(step.target);
+                      if (retryDropdown) {
+                        retryDropdown.scrollIntoView({ behavior: "smooth", block: "center" });
+                        updateTargetPosition();
+                      }
+                    }, 150);
+                  }, 100);
+                }
+              };
+              setTimeout(checkDropdown, 100);
+            }, 100);
+          }
+        } else {
+          const element = document.querySelector(step.target);
+          if (element) {
+            // Smooth scroll to element with some offset for better visibility
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
         }
       }
 
@@ -241,7 +271,15 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 z-[100] transition-opacity" />
+      <div
+        className="fixed inset-0 bg-black/60 z-[100] transition-opacity"
+        onClick={(e) => {
+          // Prevent backdrop clicks from closing dropdown during quick fill step
+          if (step.target === "[data-coach-quick-fill-dropdown]") {
+            e.stopPropagation();
+          }
+        }}
+      />
 
       {/* Highlight cutout */}
       <div
@@ -260,38 +298,76 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
         }}
       />
 
-      {/* Global styles for coach marks */}
-      <style jsx global>{`
-        /* Remove grayscale from ALL card images during card coach steps */
-        body.coach-card-step [data-coach-card-slot] img {
-          filter: none !important;
-          opacity: 1 !important;
-        }
+      {/* Mouse cursor indicator for card steps */}
+      {(currentStep === 0 || currentStep === 1) && (
+        <div
+          className="fixed z-[102] pointer-events-none"
+          style={{
+            left: targetRect.left + targetRect.width / 2,
+            top: targetRect.top + targetRect.height / 2,
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          {/* Mouse cursor SVG - smaller and more subtle */}
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 48 48"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={cn(
+              "opacity-80",
+              currentStep === 0 ? "animate-click-left" : "animate-click-right"
+            )}
+          >
+            {/* Mouse body */}
+            <path
+              d="M24 4C18.4772 4 14 8.47715 14 14V28C14 33.5228 18.4772 38 24 38C29.5228 38 34 33.5228 34 28V14C34 8.47715 29.5228 4 24 4Z"
+              fill="rgba(255, 255, 255, 0.9)"
+              stroke="rgba(99, 102, 241, 0.6)"
+              strokeWidth="2"
+            />
 
-        /* Glow effect for navigation arrows during coach marks */
-        body.coach-marks-active [data-coach-navigation] {
-          animation: coach-glow 2s ease-in-out infinite;
-          position: relative;
-          z-index: 1;
-        }
+            {/* Left button - highlighted for step 0 */}
+            <path
+              d="M24 4C18.4772 4 14 8.47715 14 14V20H24V4Z"
+              fill={currentStep === 0 ? "rgba(99, 102, 241, 0.7)" : "rgba(229, 231, 235, 0.5)"}
+              stroke="rgba(99, 102, 241, 0.6)"
+              strokeWidth="2"
+              opacity={currentStep === 0 ? "1" : "0.4"}
+            />
 
-        @keyframes coach-glow {
-          0%, 100% {
-            box-shadow:
-              0 0 15px rgba(99, 102, 241, 0.9),
-              0 0 30px rgba(99, 102, 241, 0.7),
-              0 0 45px rgba(99, 102, 241, 0.5);
-            border-color: rgba(99, 102, 241, 0.8) !important;
-          }
-          50% {
-            box-shadow:
-              0 0 25px rgba(99, 102, 241, 1),
-              0 0 50px rgba(99, 102, 241, 0.9),
-              0 0 75px rgba(99, 102, 241, 0.7);
-            border-color: rgba(99, 102, 241, 1) !important;
-          }
-        }
-      `}</style>
+            {/* Right button - highlighted for step 1 */}
+            <path
+              d="M24 4C29.5228 4 34 8.47715 34 14V20H24V4Z"
+              fill={currentStep === 1 ? "rgba(99, 102, 241, 0.7)" : "rgba(229, 231, 235, 0.5)"}
+              stroke="rgba(99, 102, 241, 0.6)"
+              strokeWidth="2"
+              opacity={currentStep === 1 ? "1" : "0.4"}
+            />
+
+            {/* Middle divider */}
+            <line
+              x1="24"
+              y1="4"
+              x2="24"
+              y2="20"
+              stroke="rgba(99, 102, 241, 0.6)"
+              strokeWidth="2"
+            />
+
+            {/* Scroll wheel */}
+            <rect
+              x="22"
+              y="12"
+              width="4"
+              height="6"
+              rx="2"
+              fill="rgba(75, 85, 99, 0.6)"
+            />
+          </svg>
+        </div>
+      )}
 
       {/* Tooltip */}
       <div

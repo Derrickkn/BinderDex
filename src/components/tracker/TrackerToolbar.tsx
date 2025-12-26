@@ -154,11 +154,8 @@ export function TrackerToolbar({
       const result = await action();
       if (result.error) {
         setNotification({ message: result.error, type: "error" });
-      } else if (result.count > 0) {
-        setNotification({ message: `Marked ${result.count} ${description} as owned`, type: "success" });
-      } else {
-        setNotification({ message: `All ${description} already owned`, type: "info" });
       }
+      // Success messages removed - silent success for better UX
     } finally {
       setActiveAction(null);
     }
@@ -172,11 +169,8 @@ export function TrackerToolbar({
       const result = await action();
       if (result.error) {
         setNotification({ message: result.error, type: "error" });
-      } else if (result.count > 0) {
-        setNotification({ message: `Cleared ${result.count} cards`, type: "info" });
-      } else {
-        setNotification({ message: "No cards to clear", type: "info" });
       }
+      // Success messages removed - silent success for better UX
     } finally {
       setActiveAction(null);
     }
@@ -256,6 +250,7 @@ export function TrackerToolbar({
       {quickFillOpen && (
         <div
           ref={dropdownRef}
+          data-coach-quick-fill-dropdown
           className="fixed z-50 w-72 rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl"
           style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
         >
