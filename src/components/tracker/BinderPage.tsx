@@ -4,7 +4,6 @@ import { TrackerCard, SlotConfig, SLOT_CONFIGS } from "@/lib/types/tracker";
 import { CardSlot, EmptySlot, CardSlotSkeleton } from "./CardSlot";
 import { getGridColsClass } from "@/lib/tracker/utils";
 import { cn } from "@/lib/utils";
-import { BlurFade } from "@/components/magicui/blur-fade";
 
 interface BinderPageProps {
   cards: TrackerCard[];
@@ -36,34 +35,17 @@ export function BinderPage({
         "aspect-auto"
       )}
     >
-      {cards.map((card, index) => (
-        <BlurFade
+      {cards.map((card) => (
+        <CardSlot
           key={card.variant_id}
-          delay={index * 0.02}
-          duration={0.3}
-          direction="up"
-          offset={4}
-          blur="4px"
-        >
-          <CardSlot
-            card={card}
-            onToggle={() => onToggleCard(card.variant_id)}
-            onOpenDetail={() => onOpenCardDetail(card.variant_id)}
-            isHighlighted={highlightedVariantId === card.variant_id}
-          />
-        </BlurFade>
+          card={card}
+          onToggle={() => onToggleCard(card.variant_id)}
+          onOpenDetail={() => onOpenCardDetail(card.variant_id)}
+          isHighlighted={highlightedVariantId === card.variant_id}
+        />
       ))}
       {Array.from({ length: emptySlots }).map((_, i) => (
-        <BlurFade
-          key={`empty-${i}`}
-          delay={(cards.length + i) * 0.02}
-          duration={0.3}
-          direction="up"
-          offset={4}
-          blur="4px"
-        >
-          <EmptySlot />
-        </BlurFade>
+        <EmptySlot key={`empty-${i}`} />
       ))}
     </div>
   );
