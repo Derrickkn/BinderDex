@@ -451,22 +451,20 @@ export function TrackerToolbar({
           onConfirm={async () => {
             if (confirmAction === "mark-all") {
               if (hasSelections) {
-                // Mark only selected rarities
+                // Mark only selected rarities - OPTIMIZED: Process all in parallel
                 setActiveAction("mark-all");
                 try {
-                  let totalMarked = 0;
+                  // Execute all rarity marking operations in parallel using Promise.all
+                  const allOperations = [
+                    ...selectedRarities.map(rarity => onMarkByRarity(rarity)),
+                    ...selectedReverseHolos.map(rarity => onMarkReverseHolosByRarity(rarity))
+                  ];
 
-                  // Mark selected normal rarities
-                  for (const rarity of selectedRarities) {
-                    const result = await onMarkByRarity(rarity);
-                    totalMarked += result.count;
-                  }
+                  // Wait for all operations to complete in parallel
+                  const results = await Promise.all(allOperations);
 
-                  // Mark selected reverse holos
-                  for (const rarity of selectedReverseHolos) {
-                    const result = await onMarkReverseHolosByRarity(rarity);
-                    totalMarked += result.count;
-                  }
+                  // Sum up all the marked cards
+                  const totalMarked = results.reduce((sum, result) => sum + result.count, 0);
 
                   setNotification({
                     type: "success",
