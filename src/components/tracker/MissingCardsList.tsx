@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
+import { FixedSizeGrid } from "react-window";
 import { TrackerCard, SlotConfig } from "@/lib/types/tracker";
 import { formatVariantType, getMissingCards, getViewForCard } from "@/lib/tracker/utils";
 import { ChevronDown, ChevronUp, ArrowUp, ArrowDown } from "lucide-react";
@@ -260,20 +261,100 @@ export function MissingCardsList({
           <ExportButtons cards={cards} setId={setId} setName={setName} totalCardsInSet={totalCardsInSet} />
         </div>
 
-        {/* Card grid - custom scrollbar styling */}
-        <div className="max-h-64 overflow-y-auto px-4 py-3 pb-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700 hover:scrollbar-thumb-zinc-600">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-            {sortedMissingCards.map((card) => (
-              <MissingCardItem
-                key={card.variant_id}
-                card={card}
-                onClick={() => handleCardNavigate(card)}
-                onRightClick={(e) => handleCardDetail(card, e)}
-              />
-            ))}
-          </div>
+        {/* Card grid - VIRTUALIZED for performance with large lists */}
+        <div className="px-4 py-3 pb-6">
+          <VirtualizedMissingCardsGrid
+            cards={sortedMissingCards}
+            onCardNavigate={handleCardNavigate}
+            onCardDetail={handleCardDetail}
+          />
         </div>
       </div>
+    </div>
+  );
+}
+
+// Virtualized grid component for performance with large lists
+interface VirtualizedMissingCardsGridProps {
+  cards: TrackerCard[];
+  onCardNavigate: (card: TrackerCard) => void;
+  onCardDetail: (card: TrackerCard, e: React.MouseEvent) => void;
+}
+
+function VirtualizedMissingCardsGrid({
+  cards,
+  onCardNavigate,
+  onCardDetail,
+}: VirtualizedMissingCardsGridProps) {
+  const [dimensions, setDimensions] = useState({ width: 800, height: 256 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Responsive column count based on width
+  const columnCount = useMemo(() => {
+    if (dimensions.width < 640) return 2; // Mobile
+    if (dimensions.width < 768) return 3; // Tablet
+    return 4; // Desktop
+  }, [dimensions.width]);
+
+  const rowCount = Math.ceil(cards.length / columnCount);
+  const columnWidth = Math.floor(dimensions.width / columnCount);
+  const rowHeight = 70; // Fixed height for each row
+
+  // Update dimensions on resize
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.offsetWidth,
+          height: 256, // Max height
+        });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+    return () => window.removeEventListener("resize", updateDimensions);
+  }, []);
+
+  // Render cell function for react-window
+  const Cell = ({ columnIndex, rowIndex, style }: { columnIndex: number; rowIndex: number; style: React.CSSProperties }) => {
+    const index = rowIndex * columnCount + columnIndex;
+    const card = cards[index];
+
+    if (!card) return null;
+
+    return (
+      <div style={style}>
+        <div className="p-1">
+          <MissingCardItem
+            card={card}
+            onClick={() => onCardNavigate(card)}
+            onRightClick={(e) => onCardDetail(card, e)}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  if (cards.length === 0) {
+    return null;
+  }
+
+  return (
+    <div ref={containerRef} className="w-full">
+      <FixedSizeGrid
+        columnCount={columnCount}
+        columnWidth={columnWidth}
+        height={Math.min(dimensions.height, rowCount * rowHeight)}
+        rowCount={rowCount}
+        rowHeight={rowHeight}
+        width={dimensions.width}
+        className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700 hover:scrollbar-thumb-zinc-600"
+      >
+        {Cell}
+      </FixedSizeGrid>
     </div>
   );
 }

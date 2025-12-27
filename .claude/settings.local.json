@@ -51,7 +51,8 @@
       "Bash(npx tsc:*)",
       "Bash(ls:*)",
       "Bash(timeout 15 npm run dev:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npm uninstall:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

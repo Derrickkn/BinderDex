@@ -37,6 +37,15 @@ function useIsDesktop() {
   return isDesktop;
 }
 
+/**
+ * BinderView uses pagination instead of virtual scrolling for optimal performance:
+ * - Only renders visible pages (max 32 slots on desktop, 16 on mobile)
+ * - Pagination provides natural "virtualization" effect
+ * - Maintains physical binder metaphor (swipe between pages)
+ * - Image preloading for adjacent pages provides instant navigation
+ *
+ * Virtual scrolling is NOT needed here - pagination is more performant and UX-appropriate.
+ */
 export function BinderView({
   cards,
   slotConfig,
