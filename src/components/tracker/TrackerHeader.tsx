@@ -27,11 +27,29 @@ export function TrackerHeader({
             <ArrowLeft className="h-4 w-4" />
           </Link>
 
-          {/* Set abbreviation */}
-          <div className="relative h-8 w-14 shrink-0 overflow-hidden rounded-lg bg-zinc-800 flex items-center justify-center">
-            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
-              {set.id.toUpperCase()}
-            </span>
+          {/* Set logo */}
+          <div className="relative h-12 w-20 shrink-0 flex items-center justify-center">
+            {set.logo_url ? (
+              <Image
+                src={set.logo_url}
+                alt={set.name}
+                width={80}
+                height={48}
+                className="object-contain max-w-full max-h-full"
+              />
+            ) : set.symbol_url ? (
+              <Image
+                src={set.symbol_url}
+                alt={set.name}
+                width={40}
+                height={40}
+                className="object-contain"
+              />
+            ) : (
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                {set.id.toUpperCase()}
+              </span>
+            )}
           </div>
 
           {/* Set details with inline progress */}
@@ -74,7 +92,7 @@ export function TrackerHeaderSkeleton() {
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="h-8 w-8 rounded-md bg-zinc-800 animate-pulse shrink-0" />
-          <div className="h-10 w-10 rounded-lg bg-zinc-800 animate-pulse shrink-0" />
+          <div className="h-12 w-20 bg-zinc-800/30 animate-pulse shrink-0" />
           <div className="flex-1 space-y-1.5">
             <div className="h-4 w-32 rounded bg-zinc-800 animate-pulse" />
             <div className="h-3 w-24 rounded bg-zinc-800 animate-pulse" />

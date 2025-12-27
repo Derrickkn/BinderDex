@@ -33,40 +33,61 @@ Mega Evolution • Base Set ████░░░░░░░░░
 **What Changed:**
 - One-time interactive tutorial triggered on first tracker visit
 - Stored in localStorage using `hasSeenTrackerTutorial` flag
-- **5-step guided tour** with visual highlighting and special effects:
-  1. **Card Slot - Click** - "Click any card to mark it as owned or missing"
-     - ALL cards show in full color (grayscale removed) during this step
-  2. **Card Slot - Right-Click** - "Right-click any card to view detailed information"
-     - Cards remain in full color to demonstrate the feature
-  3. **Navigation** - "Browse pages with arrows or keyboard ← → keys"
-     - BOTH navigation arrows glow with pulsing animation
-  4. **Quick Fill** - "Quickly mark entire rarities as owned"
-  5. **Missing Cards** - "Click any missing card to jump to its slot"
-     - Auto-scrolls to missing cards section when step becomes active
+- **7-step guided tour** with visual highlighting and device-aware text (organized top-to-bottom):
+  1. **Track Your Collection** - Desktop: "Left-click any card..." | Touch: "Tap any card to mark it as owned or missing"
+     - Card slot is highlighted with indigo border and shadow
+     - **Location**: Binder cards (middle of page)
+  2. **Card Details** - Desktop: "Right-click any card..." | Touch: "Touch and hold any card to view detailed information"
+     - Card slot is highlighted with indigo border and shadow
+     - **Location**: Binder cards (middle of page)
+  3. **Quick Fill** - Desktop: "Click here..." | Touch: "Tap here to quickly mark entire rarities as owned"
+     - Highlights the quick fill button
+     - **Location**: Toolbar (top of page)
+  4. **Customize Your Binder** - Desktop: "Click to change..." | Touch: "Tap to change binder layout (3×3, 3×4, 4×4) and toggle Reverse Holos or Promos"
+     - Highlights the binder settings section (layout buttons + toggle pills)
+     - Mobile: Highlights top row of toolbar | Desktop: Highlights settings group
+     - **Location**: Toolbar (top of page)
+  5. **Navigate Your Binder** - Desktop: "Browse pages with arrows or keyboard ← → keys" | Touch: "Browse pages with arrows or swipe left and right"
+     - Navigation arrows are highlighted and brought to front (desktop side arrows, mobile bottom nav)
+     - **Location**: Navigation controls (middle/bottom of binder)
+  6. **Find Missing Cards** - Desktop: "Click..." | Touch: "Tap any missing card to jump to its slot"
+     - Auto-scrolls to missing cards section
+     - **Location**: Missing cards list (bottom of page)
+  7. **Export Options** - "Export your missing cards list to PDF or Excel"
+     - Highlights the export buttons (desktop: inline, mobile: collapsible section)
+     - **Location**: Export section (bottom of page)
 
 **Features:**
 - Backdrop dimming with highlighted target element
 - Arrow pointer connecting tooltip to target
-- Progress dots showing current step (1 of 5)
-- "Back" button to return to previous step (appears on steps 2-5)
+- Progress dots showing current step (1 of 7)
+- "Back" button to return to previous step (appears on steps 2-7)
 - "Next" button to advance, "Skip" to dismiss
 - Keyboard accessible (Enter to advance, Escape to skip)
 - SSR-safe with client-side localStorage checks
 - Auto-scroll to target elements for better visibility
-- Dynamic styling based on current step (full color cards, glowing arrows)
+- Dynamic styling based on current step
+- Mobile responsive tooltip positioning
+- **Device-aware text** - Automatically detects touch devices and shows "Tap" / "Touch and hold" instead of "Click" / "Right-click"
+- **Touch gestures** - Swipe left/right to navigate pages on mobile, pinch-to-zoom for larger binder layouts
+- **Responsive toolbar** - Mobile: Two-row layout (binder settings on top, Quick Fill below) | Desktop: Single horizontal row
 
 **Special Visual Effects:**
-- **Steps 1-2 (Card steps)**: Removes grayscale filter from all card images
-- **Step 3 (Navigation)**: Pulsing glow animation on both arrow buttons
-- **Step 5 (Missing Cards)**: Smooth scroll to missing cards section
+- **Steps 1-2 (Card interaction)**: Highlights card slots with border and shadow
+- **Step 3 (Quick Fill)**: Highlights quick fill button in toolbar
+- **Step 4 (Binder Settings)**: Highlights binder layout and toggle settings
+- **Step 5 (Navigation)**: Highlights navigation arrows (desktop side, mobile bottom)
+- **Step 6 (Missing Cards)**: Auto-scrolls to missing cards section
 
 **Files Created:**
 - `src/components/tracker/CoachMarks.tsx` - Main component with dynamic styling
 - Data attributes added to target elements:
   - `[data-coach-card-slot]` - CardSlot.tsx
-  - `[data-coach-navigation]` - BinderView.tsx (both left and right arrows)
-  - `[data-coach-missing-cards]` - MissingCardsList.tsx
+  - `[data-coach-navigation]` - BinderView.tsx (desktop arrows) + BinderNavigation.tsx (mobile)
   - `[data-coach-quick-fill]` - TrackerToolbar.tsx
+  - `[data-coach-binder-settings]` - TrackerToolbar.tsx (mobile: row 1, desktop: settings group)
+  - `[data-coach-missing-cards]` - MissingCardsList.tsx
+  - `[data-coach-export]` - ExportButtons.tsx
 
 **Integration:** Added to `src/app/tracker/[setId]/page.tsx`
 
@@ -139,7 +160,7 @@ export { HelpOverlay } from "./HelpOverlay";
 
 ### Coach Marks
 - [ ] Tutorial appears on first visit to tracker
-- [ ] All 4 steps display correctly
+- [ ] All 7 steps display correctly
 - [ ] Target elements are properly highlighted
 - [ ] "Next" advances through steps
 - [ ] "Skip tutorial" dismisses immediately

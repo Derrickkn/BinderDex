@@ -76,6 +76,7 @@ export function CardSlot({
   return (
     <div
       data-coach-card-slot
+      data-owned={isOwned ? "true" : "false"}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}

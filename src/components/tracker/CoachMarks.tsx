@@ -82,60 +82,42 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
       // Auto-scroll to target if needed
       const step = steps[currentStep];
       if (step) {
-        // Special handling for quick fill dropdown - click to open it
-        if (step.target === "[data-coach-quick-fill-dropdown]") {
-          const quickFillButton = document.querySelector("[data-coach-quick-fill]") as HTMLButtonElement;
-          if (quickFillButton) {
-            // Click to open dropdown
-            quickFillButton.click();
+        let element: Element | null = null;
 
-            // Wait for dropdown to be positioned with multiple retries
-            let retryCount = 0;
-            const maxRetries = 10;
-            const checkInterval = 100;
-
-            const checkDropdown = () => {
-              const dropdown = document.querySelector(step.target);
-              if (dropdown) {
-                // Dropdown found, wait a bit more for positioning to settle
-                setTimeout(() => {
-                  dropdown.scrollIntoView({ behavior: "smooth", block: "center" });
-                  // Update position multiple times to handle async positioning
-                  updateTargetPosition();
-                  setTimeout(updateTargetPosition, 50);
-                  setTimeout(updateTargetPosition, 150);
-                  setTimeout(updateTargetPosition, 300);
-                }, 50);
-              } else if (retryCount < maxRetries) {
-                // Retry
-                retryCount++;
-                setTimeout(checkDropdown, checkInterval);
-              }
-            };
-
-            setTimeout(checkDropdown, 100);
+        // For card slots, find first visible one
+        if (step.target === "[data-coach-card-slot]") {
+          const allCardSlots = document.querySelectorAll(step.target);
+          for (const slot of Array.from(allCardSlots)) {
+            const rect = slot.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              element = slot;
+              break;
+            }
           }
         } else {
-          // For card slots, scroll to a visible one
-          let element: Element | null = null;
-          if (step.target === "[data-coach-card-slot]") {
-            const allCardSlots = document.querySelectorAll(step.target);
-            // Find first visible card slot
-            for (const slot of Array.from(allCardSlots)) {
-              const rect = slot.getBoundingClientRect();
-              if (rect.width > 0 && rect.height > 0) {
-                element = slot;
-                break;
-              }
+          // For other elements, find first visible match (important for responsive layouts)
+          const allElements = document.querySelectorAll(step.target);
+          for (const el of Array.from(allElements)) {
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              element = el;
+              break;
             }
-          } else {
+          }
+          // Fallback to first match
+          if (!element) {
             element = document.querySelector(step.target);
           }
+        }
 
-          if (element) {
-            // Smooth scroll to element with some offset for better visibility
-            element.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
+        if (element) {
+          // Smooth scroll to element with some offset for better visibility
+          // Use "center" to ensure element isn't at viewport edges
+          element.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "center"
+          });
         }
       }
 
@@ -179,8 +161,20 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
         element = allCardSlots[middleIndex];
       }
     } else {
-      // For other elements, use first match
-      element = document.querySelector(step.target);
+      // For other elements, find first visible match
+      const allElements = document.querySelectorAll(step.target);
+      for (const el of Array.from(allElements)) {
+        const rect = el.getBoundingClientRect();
+        // Check if element is visible (has dimensions and not display:none)
+        if (rect.width > 0 && rect.height > 0) {
+          element = el;
+          break;
+        }
+      }
+      // Fallback to first match if no visible element found
+      if (!element) {
+        element = document.querySelector(step.target);
+      }
     }
 
     if (element) {
@@ -220,49 +214,81 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
   const step = steps[currentStep];
   const position = step.position || "bottom";
 
+  // Determine if mobile and calculate position
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const isMobile = viewportWidth < 640; // sm breakpoint
+  const mobilePosition = targetRect.top > viewportHeight / 2 ? "top" : "bottom";
+  const finalPosition = isMobile ? mobilePosition : position;
+
+  // Calculate highlight cutout position with viewport constraints
+  const getHighlightStyle = () => {
+    const padding = 4; // pixels to extend beyond element
+    const minMargin = 2; // minimum margin from viewport edge
+
+    let left = targetRect.left - padding;
+    let top = targetRect.top - padding;
+    let width = targetRect.width + padding * 2;
+    let height = targetRect.height + padding * 2;
+
+    // Constrain to viewport - prevent clipping at edges
+    if (left < minMargin) {
+      const diff = minMargin - left;
+      left = minMargin;
+      width -= diff;
+    }
+    if (top < minMargin) {
+      const diff = minMargin - top;
+      top = minMargin;
+      height -= diff;
+    }
+    if (left + width > viewportWidth - minMargin) {
+      width = viewportWidth - minMargin - left;
+    }
+    if (top + height > viewportHeight - minMargin) {
+      height = viewportHeight - minMargin - top;
+    }
+
+    return { left, top, width, height };
+  };
+
+  const highlightStyle = getHighlightStyle();
+
   // Calculate tooltip position with viewport constraints
   const getTooltipStyle = (): React.CSSProperties => {
-    // Use smaller padding for quick fill dropdown to reduce gap
-    const padding = step.target === "[data-coach-quick-fill-dropdown]" ? 12 : 12;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const tooltipWidth = 320; // max-w-[calc(100vw-2rem)] = 320px on most screens
+    const padding = 12;
+
+    // Mobile: use full width minus margin, Desktop: fixed 320px
+    const tooltipWidth = isMobile ? viewportWidth - 32 : 320;
     const tooltipHeight = 200; // approximate height
+    const margin = 16; // 1rem
 
     let left = targetRect.left + targetRect.width / 2;
     let top = 0;
     let transform = "";
 
-    // Special positioning for quick fill dropdown - always to the right
-    if (step.target === "[data-coach-quick-fill-dropdown]") {
-      left = targetRect.right + padding;
-      top = targetRect.top + targetRect.height / 2;
-      transform = "translate(0, -50%)";
-    } else {
-      switch (position) {
-        case "top":
-          top = targetRect.top - padding;
-          transform = "translate(-50%, -100%)";
-          break;
-        case "bottom":
-          top = targetRect.bottom + padding;
-          transform = "translate(-50%, 0)";
-          break;
-        case "left":
-          left = targetRect.left - padding;
-          top = targetRect.top + targetRect.height / 2;
-          transform = "translate(-100%, -50%)";
-          break;
-        case "right":
-          left = targetRect.right + padding;
-          top = targetRect.top + targetRect.height / 2;
-          transform = "translate(0, -50%)";
-          break;
-      }
+    switch (finalPosition) {
+      case "top":
+        top = targetRect.top - padding;
+        transform = "translate(-50%, -100%)";
+        break;
+      case "bottom":
+        top = targetRect.bottom + padding;
+        transform = "translate(-50%, 0)";
+        break;
+      case "left":
+        left = targetRect.left - padding;
+        top = targetRect.top + targetRect.height / 2;
+        transform = "translate(-100%, -50%)";
+        break;
+      case "right":
+        left = targetRect.right + padding;
+        top = targetRect.top + targetRect.height / 2;
+        transform = "translate(0, -50%)";
+        break;
     }
 
     // Constrain to viewport bounds
-    const margin = 16; // 1rem
 
     // Calculate final position after transform
     let finalLeft = left;
@@ -326,15 +352,7 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 z-[100] transition-opacity"
-        onClick={(e) => {
-          // Prevent backdrop clicks from closing dropdown during quick fill step
-          if (step.target === "[data-coach-quick-fill-dropdown]") {
-            e.stopPropagation();
-          }
-        }}
-      />
+      <div className="fixed inset-0 bg-black/60 z-[100] transition-opacity" />
 
       {/* Highlight cutout */}
       <div
@@ -343,121 +361,21 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
           step.target === "[data-coach-card-slot]" && "coach-card-highlight"
         )}
         style={{
-          left: targetRect.left - 4,
-          top: targetRect.top - 4,
-          width: targetRect.width + 8,
-          height: targetRect.height + 8,
+          left: highlightStyle.left,
+          top: highlightStyle.top,
+          width: highlightStyle.width,
+          height: highlightStyle.height,
           boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6), 0 0 20px rgba(99, 102, 241, 0.5)",
           borderRadius: "8px",
           border: "2px solid rgba(99, 102, 241, 0.8)",
         }}
       />
 
-      {/* Additional highlight for quick fill button in step 3 */}
-      {step.target === "[data-coach-quick-fill-dropdown]" && (() => {
-        const button = document.querySelector("[data-coach-quick-fill]");
-        if (button) {
-          const buttonRect = button.getBoundingClientRect();
-          return (
-            <div
-              className="fixed z-[101] pointer-events-none"
-              style={{
-                left: buttonRect.left - 4,
-                top: buttonRect.top - 4,
-                width: buttonRect.width + 8,
-                height: buttonRect.height + 8,
-                borderRadius: "8px",
-                border: "2px solid rgba(99, 102, 241, 0.8)",
-                boxShadow: "0 0 20px rgba(99, 102, 241, 0.5)",
-              }}
-            />
-          );
-        }
-        return null;
-      })()}
-
-      {/* Minimalist mouse cursor indicator for card steps */}
-      {(currentStep === 0 || currentStep === 1) && (
-        <div
-          className="fixed z-[102] pointer-events-none"
-          style={{
-            left: targetRect.left + targetRect.width / 2,
-            top: targetRect.top + targetRect.height / 2,
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          {/* Minimalist hand cursor */}
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 32 32"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Hand palm */}
-            <path
-              d="M16 26C16 26 12 25 10 23C8 21 8 18 8 18V10C8 9 8.5 8 9.5 8C10.5 8 11 9 11 10V16"
-              stroke="#D4D4D8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            {/* Index finger - highlighted for left-click (step 0) */}
-            <path
-              d="M11 16V7C11 6 11.5 5 12.5 5C13.5 5 14 6 14 7V14"
-              stroke={currentStep === 0 ? "#6366F1" : "#D4D4D8"}
-              strokeWidth={currentStep === 0 ? "2.5" : "2"}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill={currentStep === 0 ? "rgba(99, 102, 241, 0.2)" : "none"}
-            />
-            {/* Middle finger */}
-            <path
-              d="M14 14V6C14 5 14.5 4 15.5 4C16.5 4 17 5 17 6V14"
-              stroke={currentStep === 1 ? "#6366F1" : "#D4D4D8"}
-              strokeWidth={currentStep === 1 ? "2.5" : "2"}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill={currentStep === 1 ? "rgba(99, 102, 241, 0.2)" : "none"}
-            />
-            {/* Ring finger */}
-            <path
-              d="M17 14V7C17 6 17.5 5 18.5 5C19.5 5 20 6 20 7V16"
-              stroke="#D4D4D8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            {/* Pinky */}
-            <path
-              d="M20 16V9C20 8 20.5 7 21.5 7C22.5 7 23 8 23 9V18C23 18 23 21 21 23C19 25 16 26 16 26"
-              stroke="#D4D4D8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-            {/* Click indicator text */}
-            <text
-              x="16"
-              y="30"
-              textAnchor="middle"
-              fill="#6366F1"
-              fontSize="5"
-              fontWeight="600"
-            >
-              {currentStep === 0 ? "LEFT" : "RIGHT"}
-            </text>
-          </svg>
-        </div>
-      )}
 
       {/* Tooltip */}
       <div
         ref={tooltipRef}
-        className="fixed z-[102] w-80 max-w-[calc(100vw-2rem)]"
+        className="fixed z-[104] w-80 max-w-[calc(100vw-2rem)]"
         style={getTooltipStyle()}
       >
         <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl p-4">
@@ -530,17 +448,13 @@ export function CoachMarks({ steps, storageKey, onComplete, onRestart }: CoachMa
         <div
           className={cn(
             "absolute w-0 h-0 border-8",
-            // Quick fill dropdown always has left-pointing arrow
-            step.target === "[data-coach-quick-fill-dropdown]" &&
-              "left-0 top-1/2 -translate-x-full -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-zinc-700",
-            // Other positions
-            step.target !== "[data-coach-quick-fill-dropdown]" && position === "bottom" &&
+            finalPosition === "bottom" &&
               "top-0 left-1/2 -translate-x-1/2 -translate-y-full border-l-transparent border-r-transparent border-t-transparent border-b-zinc-700",
-            step.target !== "[data-coach-quick-fill-dropdown]" && position === "top" &&
+            finalPosition === "top" &&
               "bottom-0 left-1/2 -translate-x-1/2 translate-y-full border-l-transparent border-r-transparent border-b-transparent border-t-zinc-700",
-            step.target !== "[data-coach-quick-fill-dropdown]" && position === "right" &&
+            finalPosition === "right" &&
               "left-0 top-1/2 -translate-x-full -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-zinc-700",
-            step.target !== "[data-coach-quick-fill-dropdown]" && position === "left" &&
+            finalPosition === "left" &&
               "right-0 top-1/2 translate-x-full -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-zinc-700"
           )}
         />

@@ -129,7 +129,128 @@ export async function getSetById(setId: string): Promise<{
 }
 
 /**
+ * Get cards with variants AND collection data for a set in a single optimized query
+ * OPTIMIZED: Uses LEFT JOIN to eliminate client-side merge
+ */
+export async function getSetVariantsWithCollection(
+  setId: string,
+  preferences: TrackerPreferences
+): Promise<{
+  data: TrackerCard[] | null;
+  error: string | null;
+}> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Build the query with nested LEFT JOIN to user_collections
+  let query = supabase
+    .from("cards")
+    .select(
+      `
+      *,
+      card_variants!inner(
+        id,
+        variant_type,
+        image_url,
+        user_collections(
+          id,
+          quantity,
+          condition,
+          notes,
+          acquired_date
+        )
+      )
+    `
+    )
+    .eq("set_id", setId);
+
+  // Filter by user if authenticated (only get this user's collection entries)
+  if (user) {
+    query = query.eq("card_variants.user_collections.user_id", user.id);
+  }
+
+  // Filter promos if not included
+  if (!preferences.includePromos) {
+    query = query.eq("is_promo", false);
+  }
+
+  const { data: cards, error } = await query.order("number");
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  // Flatten the variants into TrackerCards with collection data already joined
+  const trackerCards: TrackerCard[] = [];
+
+  for (const card of cards) {
+    const variants = card.card_variants as unknown as Array<{
+      id: string;
+      variant_type: string;
+      image_url: string | null;
+      user_collections: Array<{
+        id: string;
+        quantity: number;
+        condition: string | null;
+        notes: string | null;
+        acquired_date: string | null;
+      }> | null;
+    }>;
+
+    for (const variant of variants) {
+      // Get collection data if it exists
+      const collection = variant.user_collections?.[0] || null;
+
+      // Filter variants based on preferences
+      const shouldInclude =
+        variant.variant_type === "NORMAL" ||
+        (variant.variant_type === "REVERSE_HOLO" && preferences.includeReverseHolos);
+
+      if (shouldInclude) {
+        trackerCards.push({
+          ...card,
+          card_variants: undefined,
+          variant_id: variant.id,
+          variant_type: variant.variant_type as CardWithVariant["variant_type"],
+          variant_image_url: variant.image_url,
+          owned: collection?.quantity ? collection.quantity > 0 : false,
+          quantity: collection?.quantity || 0,
+          condition: collection?.condition || null,
+          notes: collection?.notes || null,
+          acquired_date: collection?.acquired_date || null,
+          collection_id: collection?.id || null,
+        } as TrackerCard);
+      }
+    }
+  }
+
+  // Sort by number then variant type
+  trackerCards.sort((a, b) => {
+    const numA = parseInt(a.number, 10);
+    const numB = parseInt(b.number, 10);
+
+    if (!isNaN(numA) && !isNaN(numB)) {
+      if (numA !== numB) return numA - numB;
+    } else {
+      const strCompare = a.number.localeCompare(b.number, undefined, {
+        numeric: true,
+      });
+      if (strCompare !== 0) return strCompare;
+    }
+
+    // NORMAL before REVERSE_HOLO
+    return a.variant_type.localeCompare(b.variant_type);
+  });
+
+  return { data: trackerCards, error: null };
+}
+
+/**
  * Get cards with variants for a set, filtered by preferences
+ * NOTE: This is the old implementation. Use getSetVariantsWithCollection() for better performance.
  */
 export async function getSetVariants(
   setId: string,
@@ -224,6 +345,7 @@ export async function getSetVariants(
 
 /**
  * Get user's collection entries for a set
+ * OPTIMIZED: Filters by set at database level instead of client-side
  */
 export async function getUserCollectionForSet(setId: string): Promise<{
   data: Map<string, TrackerCard> | null;
@@ -239,6 +361,7 @@ export async function getUserCollectionForSet(setId: string): Promise<{
     return { data: new Map(), error: null };
   }
 
+  // PERFORMANCE FIX: Filter by set_id at database level using WHERE clause
   const { data: collection, error } = await supabase
     .from("user_collections")
     .select(
@@ -253,32 +376,25 @@ export async function getUserCollectionForSet(setId: string): Promise<{
       )
     `
     )
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("card_variants.cards.set_id", setId); // ✅ Database-level filtering
 
   if (error) {
     return { data: null, error: error.message };
   }
 
-  // Filter to only this set and create a map by variant_id
+  // Create a map by variant_id
   const collectionMap = new Map<string, TrackerCard>();
 
   for (const entry of collection) {
-    const cardVariant = entry.card_variants as unknown as {
-      id: string;
-      card_id: string;
-      cards: { set_id: string };
-    };
-
-    if (cardVariant.cards.set_id === setId) {
-      collectionMap.set(entry.variant_id, {
-        owned: entry.quantity > 0,
-        quantity: entry.quantity,
-        condition: entry.condition,
-        notes: entry.notes,
-        acquired_date: entry.acquired_date,
-        collection_id: entry.id,
-      } as unknown as TrackerCard);
-    }
+    collectionMap.set(entry.variant_id, {
+      owned: entry.quantity > 0,
+      quantity: entry.quantity,
+      condition: entry.condition,
+      notes: entry.notes,
+      acquired_date: entry.acquired_date,
+      collection_id: entry.id,
+    } as unknown as TrackerCard);
   }
 
   return { data: collectionMap, error: null };

@@ -103,13 +103,41 @@ export function TrackerToolbar({
   const [notification, setNotification] = useState<{ message: string; type: "success" | "info" | "error" } | null>(null);
   const [confirmAction, setConfirmAction] = useState<"mark-all" | "clear-all" | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Selected rarities for toggle mode
+  const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
+  const [selectedReverseHolos, setSelectedReverseHolos] = useState<string[]>([]);
+
+  const mobileButtonRef = useRef<HTMLButtonElement>(null);
+  const desktopButtonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const sortedRarities = sortRarities(rarities);
 
+  // Toggle handlers
+  const toggleRarity = (rarity: string) => {
+    setSelectedRarities(prev =>
+      prev.includes(rarity)
+        ? prev.filter(r => r !== rarity)
+        : [...prev, rarity]
+    );
+  };
+
+  const toggleReverseHolo = (rarity: string) => {
+    setSelectedReverseHolos(prev =>
+      prev.includes(rarity)
+        ? prev.filter(r => r !== rarity)
+        : [...prev, rarity]
+    );
+  };
+
+  // Determine if any selections are made
+  const hasSelections = selectedRarities.length > 0 || selectedReverseHolos.length > 0;
+  const markButtonText = hasSelections ? "Mark Selected" : "Mark All";
+
   // Handle opening dropdown with immediate position calculation
-  const handleToggleDropdown = () => {
+  const handleToggleDropdown = (isMobile: boolean) => {
+    const buttonRef = isMobile ? mobileButtonRef : desktopButtonRef;
     if (!quickFillOpen && buttonRef.current) {
       // Calculate position BEFORE opening to prevent flash
       const rect = buttonRef.current.getBoundingClientRect();
@@ -124,12 +152,11 @@ export function TrackerToolbar({
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
+      const clickedMobileButton = mobileButtonRef.current?.contains(event.target as Node);
+      const clickedDesktopButton = desktopButtonRef.current?.contains(event.target as Node);
+      const clickedDropdown = dropdownRef.current?.contains(event.target as Node);
+
+      if (!clickedMobileButton && !clickedDesktopButton && !clickedDropdown) {
         setQuickFillOpen(false);
       }
     }
@@ -146,7 +173,7 @@ export function TrackerToolbar({
     }
   }, [notification]);
 
-  const handleAction = async (actionId: string, action: () => Promise<BulkActionResult>, description: string) => {
+  const handleAction = async (actionId: string, action: () => Promise<BulkActionResult>) => {
     if (isLoading) return;
     setActiveAction(actionId);
     setNotification(null);
@@ -179,55 +206,34 @@ export function TrackerToolbar({
   return (
     <>
       <div className="border-b border-zinc-800 bg-zinc-900/50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-1 py-1.5">
-            {/* Quick Fill Button */}
-            <button
-              data-coach-quick-fill
-              ref={buttonRef}
-              onClick={handleToggleDropdown}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium",
-                "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white",
-                "border border-zinc-700 transition-colors",
-                quickFillOpen && "bg-zinc-700 text-white"
-              )}
-            >
-              <span>Quick Fill</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", quickFillOpen && "rotate-180")} />
-            </button>
+        <div className="container mx-auto px-2 sm:px-4">
+          {/* Mobile: Two rows layout */}
+          <div className="lg:hidden">
+            {/* Row 1: Binder Settings */}
+            <div data-coach-binder-settings className="flex items-center justify-center gap-2 py-1.5 border-b border-zinc-800/50">
+              {/* Slot Config Segmented Buttons */}
+              <div className="flex items-center rounded-md border border-zinc-700 overflow-hidden">
+                {SLOT_OPTIONS.map((option, idx) => (
+                  <button
+                    key={option.value}
+                    onClick={() => onSlotConfigChange(option.value)}
+                    disabled={isUpdating}
+                    title={`${option.label} grid layout`}
+                    className={cn(
+                      "flex items-center justify-center px-2 py-1.5 text-xs font-medium transition-colors",
+                      idx > 0 && "border-l border-zinc-700",
+                      slotConfig === option.value
+                        ? "bg-zinc-700 text-white"
+                        : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800",
+                      isUpdating && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <span>{option.label}</span>
+                  </button>
+                ))}
+              </div>
 
-            {/* Separator */}
-            <div className="h-5 w-px bg-zinc-700/50 mx-1.5" />
-
-            {/* Slot Config Segmented Buttons */}
-            <div className="flex items-center rounded-md border border-zinc-700 overflow-hidden">
-              {SLOT_OPTIONS.map((option, idx) => (
-                <button
-                  key={option.value}
-                  onClick={() => onSlotConfigChange(option.value)}
-                  disabled={isUpdating}
-                  title={`${option.label} grid layout`}
-                  className={cn(
-                    "flex items-center gap-1 px-2 py-1.5 text-xs font-medium transition-colors",
-                    idx > 0 && "border-l border-zinc-700",
-                    slotConfig === option.value
-                      ? "bg-zinc-700 text-white"
-                      : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800",
-                    isUpdating && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <GridIcon cols={option.cols} rows={option.rows} active={slotConfig === option.value} />
-                  <span className="hidden sm:inline">{option.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Separator */}
-            <div className="h-5 w-px bg-zinc-700/50 mx-1.5" />
-
-            {/* Toggle Pills */}
-            <div className="flex items-center gap-1.5">
+              {/* Toggle Pills */}
               <TogglePill
                 label="Reverse Holos"
                 shortLabel="RH"
@@ -241,6 +247,92 @@ export function TrackerToolbar({
                 onClick={() => onIncludePromosChange(!includePromos)}
                 disabled={isUpdating}
               />
+            </div>
+
+            {/* Row 2: Quick Fill */}
+            <div className="flex items-center justify-center py-1.5">
+              <button
+                data-coach-quick-fill
+                ref={mobileButtonRef}
+                onClick={() => handleToggleDropdown(true)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium",
+                  "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white",
+                  "border border-zinc-700 transition-colors",
+                  quickFillOpen && "bg-zinc-700 text-white"
+                )}
+              >
+                <span>Quick Fill</span>
+                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", quickFillOpen && "rotate-180")} />
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop: Single row layout */}
+          <div className="hidden lg:flex items-center gap-1 py-1.5">
+            {/* Quick Fill Button */}
+            <button
+              data-coach-quick-fill
+              ref={desktopButtonRef}
+              onClick={() => handleToggleDropdown(false)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium shrink-0",
+                "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white",
+                "border border-zinc-700 transition-colors",
+                quickFillOpen && "bg-zinc-700 text-white"
+              )}
+            >
+              <span>Quick Fill</span>
+              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", quickFillOpen && "rotate-180")} />
+            </button>
+
+            {/* Separator */}
+            <div className="h-5 w-px bg-zinc-700/50 mx-1.5" />
+
+            {/* Binder Settings Group */}
+            <div data-coach-binder-settings className="flex items-center gap-1">
+              {/* Slot Config Segmented Buttons */}
+              <div className="flex items-center rounded-md border border-zinc-700 overflow-hidden shrink-0">
+                {SLOT_OPTIONS.map((option, idx) => (
+                  <button
+                    key={option.value}
+                    onClick={() => onSlotConfigChange(option.value)}
+                    disabled={isUpdating}
+                    title={`${option.label} grid layout`}
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1.5 text-xs font-medium transition-colors",
+                      idx > 0 && "border-l border-zinc-700",
+                      slotConfig === option.value
+                        ? "bg-zinc-700 text-white"
+                        : "bg-zinc-800/50 text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800",
+                      isUpdating && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <GridIcon cols={option.cols} rows={option.rows} active={slotConfig === option.value} />
+                    <span>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Separator */}
+              <div className="h-5 w-px bg-zinc-700/50 mx-1.5" />
+
+              {/* Toggle Pills */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <TogglePill
+                  label="Reverse Holos"
+                  shortLabel="RH"
+                  active={includeReverseHolos}
+                  onClick={() => onIncludeReverseHolosChange(!includeReverseHolos)}
+                  disabled={isUpdating}
+                />
+                <TogglePill
+                  label="Promos"
+                  active={includePromos}
+                  onClick={() => onIncludePromosChange(!includePromos)}
+                  disabled={isUpdating}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -282,13 +374,10 @@ export function TrackerToolbar({
                   {sortedRarities.map((rarity) => (
                     <QuickFillButton
                       key={rarity}
-                      onClick={() => handleAction(
-                        `rarity-${rarity}`,
-                        () => onMarkByRarity(rarity),
-                        getRarityDisplay(rarity).toLowerCase()
-                      )}
-                      isLoading={activeAction === `rarity-${rarity}`}
+                      onClick={() => toggleRarity(rarity)}
                       disabled={isLoading}
+                      variant={selectedRarities.includes(rarity) ? "selected" : "default"}
+                      icon={selectedRarities.includes(rarity) ? <Check className="h-3 w-3" /> : undefined}
                     >
                       {getRarityDisplay(rarity)}
                     </QuickFillButton>
@@ -305,14 +394,10 @@ export function TrackerToolbar({
                   {sortRarities(reverseHoloRarities).map((rarity) => (
                     <QuickFillButton
                       key={`rh-${rarity}`}
-                      onClick={() => handleAction(
-                        `rh-${rarity}`,
-                        () => onMarkReverseHolosByRarity(rarity),
-                        `${getRarityDisplay(rarity).toLowerCase()} reverse holos`
-                      )}
-                      isLoading={activeAction === `rh-${rarity}`}
+                      onClick={() => toggleReverseHolo(rarity)}
                       disabled={isLoading}
-                      icon={<Layers className="h-3 w-3" />}
+                      variant={selectedReverseHolos.includes(rarity) ? "selected" : "default"}
+                      icon={selectedReverseHolos.includes(rarity) ? <Check className="h-3 w-3" /> : <Layers className="h-3 w-3" />}
                     >
                       {getRarityDisplay(rarity)}
                     </QuickFillButton>
@@ -332,7 +417,7 @@ export function TrackerToolbar({
             {/* Divider */}
             <div className="border-t border-zinc-800" />
 
-            {/* Entire Set */}
+            {/* Mark Selected / Mark All */}
             <div className="flex gap-2">
               <QuickFillButton
                 onClick={() => setConfirmAction("mark-all")}
@@ -342,7 +427,7 @@ export function TrackerToolbar({
                 variant="success"
                 className="flex-1"
               >
-                Mark All
+                {markButtonText}
               </QuickFillButton>
               <QuickFillButton
                 onClick={() => setConfirmAction("clear-all")}
@@ -365,7 +450,44 @@ export function TrackerToolbar({
           action={confirmAction}
           onConfirm={async () => {
             if (confirmAction === "mark-all") {
-              await handleAction("mark-all", onMarkAll, "cards");
+              if (hasSelections) {
+                // Mark only selected rarities
+                setActiveAction("mark-all");
+                try {
+                  let totalMarked = 0;
+
+                  // Mark selected normal rarities
+                  for (const rarity of selectedRarities) {
+                    const result = await onMarkByRarity(rarity);
+                    totalMarked += result.count;
+                  }
+
+                  // Mark selected reverse holos
+                  for (const rarity of selectedReverseHolos) {
+                    const result = await onMarkReverseHolosByRarity(rarity);
+                    totalMarked += result.count;
+                  }
+
+                  setNotification({
+                    type: "success",
+                    message: `Marked ${totalMarked} card${totalMarked !== 1 ? 's' : ''}`,
+                  });
+
+                  // Clear selections
+                  setSelectedRarities([]);
+                  setSelectedReverseHolos([]);
+                } catch {
+                  setNotification({
+                    type: "error",
+                    message: "Failed to mark cards",
+                  });
+                } finally {
+                  setActiveAction(null);
+                }
+              } else {
+                // Mark all (existing behavior)
+                await handleAction("mark-all", onMarkAll);
+              }
             } else if (confirmAction === "clear-all") {
               await handleClearAction("clear-all", onClearAll);
             }
@@ -373,6 +495,7 @@ export function TrackerToolbar({
           }}
           onCancel={() => setConfirmAction(null)}
           isLoading={activeAction === confirmAction}
+          selectedCount={hasSelections ? selectedRarities.length + selectedReverseHolos.length : undefined}
         />
       )}
     </>
@@ -445,7 +568,7 @@ interface QuickFillButtonProps {
   isLoading?: boolean;
   disabled?: boolean;
   icon?: React.ReactNode;
-  variant?: "default" | "success" | "danger";
+  variant?: "default" | "success" | "danger" | "selected";
   className?: string;
 }
 
@@ -460,6 +583,7 @@ function QuickFillButton({
 }: QuickFillButtonProps) {
   const variantStyles = {
     default: "bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border-zinc-700",
+    selected: "bg-indigo-900/40 hover:bg-indigo-900/60 text-indigo-300 hover:text-indigo-200 border-indigo-700/50",
     success: "bg-green-900/30 hover:bg-green-900/50 text-green-400 hover:text-green-300 border-green-800/50",
     danger: "bg-red-900/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 border-red-800/30",
   };
@@ -492,14 +616,17 @@ interface ConfirmationDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
   isLoading?: boolean;
+  selectedCount?: number;
 }
 
-function ConfirmationDialog({ action, onConfirm, onCancel, isLoading }: ConfirmationDialogProps) {
+function ConfirmationDialog({ action, onConfirm, onCancel, isLoading, selectedCount }: ConfirmationDialogProps) {
   const config = {
     "mark-all": {
-      title: "Mark All Cards as Owned",
-      description: "This will mark all cards in this set as owned. Are you sure you want to continue?",
-      confirmText: "Yes, Mark All",
+      title: selectedCount ? `Mark Selected Rarities` : "Mark All Cards as Owned",
+      description: selectedCount
+        ? `This will mark all cards for ${selectedCount} selected ${selectedCount === 1 ? 'rarity' : 'rarities'} as owned. Continue?`
+        : "This will mark all cards in this set as owned. Are you sure you want to continue?",
+      confirmText: selectedCount ? "Yes, Mark Selected" : "Yes, Mark All",
       variant: "success" as const,
     },
     "clear-all": {

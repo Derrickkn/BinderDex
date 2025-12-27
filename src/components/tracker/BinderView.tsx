@@ -48,6 +48,15 @@ export function BinderView({
     useTrackerStore();
   const isDesktop = useIsDesktop();
 
+  // Swipe gesture state
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+
+  // Pinch zoom state
+  const [scale, setScale] = useState(1);
+  const [initialDistance, setInitialDistance] = useState(0);
+  const [lastTap, setLastTap] = useState(0);
+
   const totalPages = calculateTotalPages(cards.length, slotConfig);
 
   // Desktop: show 2 pages at a time (spread), Mobile: single page
@@ -70,6 +79,44 @@ export function BinderView({
     }
   }, [currentPage, totalViews, setCurrentPage]);
 
+  // PERFORMANCE OPTIMIZATION: Preload images for adjacent pages
+  useEffect(() => {
+    if (!cards || cards.length === 0) return;
+
+    // Calculate adjacent page indices
+    const nextPageIndex = (currentPage + 1) * pagesPerView;
+    const prevPageIndex = Math.max(0, (currentPage - 1) * pagesPerView);
+
+    // Get cards for next and previous pages
+    const nextPageCards = getCardsForPage(cards, nextPageIndex, slotConfig);
+    const nextPageCards2 = isDesktop
+      ? getCardsForPage(cards, nextPageIndex + 1, slotConfig)
+      : [];
+    const prevPageCards = getCardsForPage(cards, prevPageIndex, slotConfig);
+    const prevPageCards2 = isDesktop
+      ? getCardsForPage(cards, prevPageIndex + 1, slotConfig)
+      : [];
+
+    // Preload images for all adjacent pages
+    const cardsToPreload = [
+      ...nextPageCards,
+      ...nextPageCards2,
+      ...prevPageCards,
+      ...prevPageCards2,
+    ];
+
+    cardsToPreload.forEach((card) => {
+      if (card) {
+        const imageUrl = card.variant_image_url || card.image_small || card.image_large;
+        if (imageUrl) {
+          // Use Image constructor to preload
+          const img = new Image();
+          img.src = imageUrl;
+        }
+      }
+    });
+  }, [cards, currentPage, pagesPerView, slotConfig, isDesktop]);
+
   // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -86,6 +133,73 @@ export function BinderView({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
+
+  // Helper to calculate distance between two touch points
+  const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Touch gesture handlers (swipe + pinch zoom)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom start
+      const distance = getDistance(e.touches[0], e.touches[1]);
+      setInitialDistance(distance);
+    } else if (e.touches.length === 1) {
+      // Swipe start
+      setTouchEnd(0);
+      setTouchStart(e.targetTouches[0].clientX);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom
+      const distance = getDistance(e.touches[0], e.touches[1]);
+      if (initialDistance > 0) {
+        const newScale = (distance / initialDistance) * scale;
+        // Constrain scale between 1x and 3x
+        setScale(Math.min(Math.max(newScale, 1), 3));
+      }
+    } else if (e.touches.length === 1) {
+      // Swipe
+      setTouchEnd(e.targetTouches[0].clientX);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) {
+      // All fingers lifted
+      if (initialDistance > 0) {
+        // End of pinch - commit the scale
+        setInitialDistance(0);
+      } else if (touchStart && touchEnd) {
+        // End of swipe
+        const distance = touchStart - touchEnd;
+        const minSwipeDistance = 50;
+
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe && canGoNext) {
+          nextPage(totalViews);
+        }
+        if (isRightSwipe && canGoPrev) {
+          prevPage();
+        }
+      }
+
+      // Double tap to reset zoom
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap;
+      if (tapLength < 300 && tapLength > 0) {
+        setScale(1);
+      }
+      setLastTap(currentTime);
+    }
+  };
 
   const canGoPrev = currentPage > 0;
   const canGoNext = currentPage < totalViews - 1;
@@ -232,17 +346,33 @@ export function BinderView({
 
       {/* Mobile Single Page View */}
       <div className="lg:hidden w-full px-3">
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-3 shadow-xl">
+        <div
+          className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-3 shadow-xl overflow-auto touch-pan-x touch-pan-y"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{
+            maxHeight: '80vh',
+          }}
+        >
           <div className="text-xs text-zinc-600 mb-2 text-center font-medium">
             Page {firstPageIndex + 1} of {totalPages}
           </div>
-          <BinderPage
-            cards={firstPageCards}
-            slotConfig={slotConfig}
-            onToggleCard={onToggleCard}
-            onOpenCardDetail={onOpenCardDetail}
-            highlightedVariantId={highlightedVariantId}
-          />
+          <div
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: 'center center',
+              transition: initialDistance > 0 ? 'none' : 'transform 0.2s ease-out',
+            }}
+          >
+            <BinderPage
+              cards={firstPageCards}
+              slotConfig={slotConfig}
+              onToggleCard={onToggleCard}
+              onOpenCardDetail={onOpenCardDetail}
+              highlightedVariantId={highlightedVariantId}
+            />
+          </div>
         </div>
       </div>
 

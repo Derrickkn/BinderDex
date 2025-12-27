@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getSetById } from "@/lib/tracker/actions";
@@ -26,6 +26,15 @@ export default function TrackerSetPage() {
 
   // Coach marks restart function
   const [restartCoachMarks, setRestartCoachMarks] = useState<(() => void) | null>(null);
+
+  // Detect touch device
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    // Check if device supports touch
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    setIsTouchDevice(hasTouch);
+  }, []);
 
   // UI state
   const { preferences, selectedVariantId, isModalOpen, openModal, closeModal } = useTrackerStore();
@@ -59,36 +68,55 @@ export default function TrackerSetPage() {
   const bulkActions = useBulkActions(setId, currentPreferences);
   const [isBulkLoading, setIsBulkLoading] = useState(false);
 
-  // Coach marks configuration
-  const coachMarkSteps: CoachMarkStep[] = [
+  // Coach marks configuration - dynamic based on device type
+  // Ordered for logical top-to-bottom flow: cards → toolbar → navigation → bottom section
+  const coachMarkSteps: CoachMarkStep[] = useMemo(() => [
     {
       target: "[data-coach-card-slot]",
       title: "Track Your Collection",
-      description: "Left-click any card to mark it as owned or missing.",
+      description: isTouchDevice
+        ? "Tap any card to mark it as owned or missing."
+        : "Left-click any card to mark it as owned or missing.",
       position: "bottom",
     },
     {
       target: "[data-coach-card-slot]",
       title: "Card Details",
-      description: "Right-click any card to view detailed information and manage your collection.",
+      description: isTouchDevice
+        ? "Touch and hold any card to view detailed information and manage your collection."
+        : "Right-click any card to view detailed information and manage your collection.",
+      position: "bottom",
+    },
+    {
+      target: "[data-coach-quick-fill]",
+      title: "Quick Fill",
+      description: isTouchDevice
+        ? "Tap here to quickly mark entire rarities as owned."
+        : "Click here to quickly mark entire rarities as owned.",
+      position: "bottom",
+    },
+    {
+      target: "[data-coach-binder-settings]",
+      title: "Customize Your Binder",
+      description: isTouchDevice
+        ? "Tap to change binder layout (3×3, 3×4, 4×4) and toggle Reverse Holos or Promos to match your physical collection."
+        : "Click to change binder layout (3×3, 3×4, 4×4) and toggle Reverse Holos or Promos to match your physical collection.",
       position: "bottom",
     },
     {
       target: "[data-coach-navigation]",
       title: "Navigate Your Binder",
-      description: "Browse pages with these arrows or use your keyboard's ← → keys for quick navigation.",
+      description: isTouchDevice
+        ? "Browse pages with these arrows or swipe left and right."
+        : "Browse pages with these arrows or use your keyboard's ← → keys for quick navigation.",
       position: "top",
-    },
-    {
-      target: "[data-coach-quick-fill-dropdown]",
-      title: "Quick Fill",
-      description: "Quickly mark entire rarities as owned with these buttons.",
-      position: "right",
     },
     {
       target: "[data-coach-missing-cards]",
       title: "Find Missing Cards",
-      description: "Click any missing card to jump directly to its slot in the binder.",
+      description: isTouchDevice
+        ? "Tap any missing card to jump directly to its slot in the binder."
+        : "Click any missing card to jump directly to its slot in the binder.",
       position: "top",
     },
     {
@@ -97,7 +125,7 @@ export default function TrackerSetPage() {
       description: "Export your missing cards list to PDF or Excel.",
       position: "top",
     },
-  ];
+  ], [isTouchDevice]);
 
   // Calculate progress
   const progress = useMemo(() => {

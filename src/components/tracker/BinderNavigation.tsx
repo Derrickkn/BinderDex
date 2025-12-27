@@ -20,7 +20,7 @@ export function BinderNavigation({
   const canGoNext = currentPage < totalPages - 1;
 
   return (
-    <div className="flex items-center justify-center gap-4 py-4">
+    <div data-coach-navigation className="flex items-center justify-center gap-4 py-4">
       {/* Previous button */}
       <button
         onClick={onPrevPage}

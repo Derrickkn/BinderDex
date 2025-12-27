@@ -47,11 +47,20 @@ body {
   }
 }
 
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
 /* Coach Marks Styles */
 /* Mouse cursor animation removed per user request */
 
-/* Grey out all cards during step 0 (first click) */
-body[data-coach-step="0"] [data-coach-card-slot] img {
+/* Grey out only unowned cards during step 0 (first click) */
+body[data-coach-step="0"] [data-coach-card-slot][data-owned="false"] img {
   filter: grayscale(100%) brightness(0.4) !important;
   opacity: 0.5 !important;
   transition: filter 0.3s ease, opacity 0.3s ease;
@@ -63,8 +72,8 @@ body[data-coach-step="0"] .coach-card-highlight img {
   opacity: 1 !important;
 }
 
-/* Step 1 (right-click): grey out all cards except highlighted one (which appears owned) */
-body[data-coach-step="1"] [data-coach-card-slot] img {
+/* Step 1 (right-click): grey out only unowned cards except highlighted one */
+body[data-coach-step="1"] [data-coach-card-slot][data-owned="false"] img {
   filter: grayscale(100%) brightness(0.4) !important;
   opacity: 0.5 !important;
   transition: filter 0.3s ease, opacity 0.3s ease;
@@ -76,8 +85,22 @@ body[data-coach-step="1"] .coach-card-highlight img {
   opacity: 1 !important;
 }
 
-/* Ensure navigation arrows are visible during step 2 - no glow, same brightness for both */
-body[data-coach-step="2"] [data-coach-navigation] {
+/* Highlight quick fill button during step 2 */
+body[data-coach-step="2"] [data-coach-quick-fill] {
+  position: relative;
+  z-index: 103 !important;
+  opacity: 1 !important;
+}
+
+/* Highlight binder settings during step 3 */
+body[data-coach-step="3"] [data-coach-binder-settings] {
+  position: relative;
+  z-index: 103 !important;
+  opacity: 1 !important;
+}
+
+/* Ensure navigation arrows are visible during step 4 - no glow, same brightness for both */
+body[data-coach-step="4"] [data-coach-navigation] {
   position: relative;
   z-index: 103 !important;
   opacity: 1 !important;
@@ -86,23 +109,15 @@ body[data-coach-step="2"] [data-coach-navigation] {
   border-color: #3f3f46 !important; /* zinc-700 - ensure both have same border */
 }
 
-/* Highlight both quick fill button and dropdown during step 3 */
-body[data-coach-step="3"] [data-coach-quick-fill],
-body[data-coach-step="3"] [data-coach-quick-fill-dropdown] {
+/* Ensure missing cards section is visible during step 5 */
+body[data-coach-step="5"] [data-coach-missing-cards] {
   position: relative;
   z-index: 103 !important;
   opacity: 1 !important;
 }
 
-/* Ensure missing cards section is visible during step 4 */
-body[data-coach-step="4"] [data-coach-missing-cards] {
-  position: relative;
-  z-index: 103 !important;
-  opacity: 1 !important;
-}
-
-/* Ensure export buttons are visible during step 5 */
-body[data-coach-step="5"] [data-coach-export] {
+/* Ensure export buttons are visible during step 6 */
+body[data-coach-step="6"] [data-coach-export] {
   position: relative;
   z-index: 103 !important;
   opacity: 1 !important;
