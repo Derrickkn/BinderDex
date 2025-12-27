@@ -286,54 +286,65 @@ function VirtualizedMissingCardsGrid({
   onCardNavigate,
   onCardDetail,
 }: VirtualizedMissingCardsGridProps) {
-  const [dimensions, setDimensions] = useState({ width: 800, height: 256 });
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Responsive column count based on width
-  const columnCount = useMemo(() => {
-    if (dimensions.width < 640) return 2; // Mobile
-    if (dimensions.width < 768) return 3; // Tablet
-    return 4; // Desktop
-  }, [dimensions.width]);
-
-  const rowCount = Math.ceil(cards.length / columnCount);
-  const columnWidth = Math.floor(dimensions.width / columnCount);
-  const rowHeight = 70; // Fixed height for each row
-
-  // Update dimensions on resize
+  // Update dimensions on resize and initial mount
   useEffect(() => {
     if (!containerRef.current) return;
 
     const updateDimensions = () => {
       if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.offsetWidth,
-          height: 256, // Max height
-        });
+        const width = containerRef.current.offsetWidth;
+        // Only update if width is valid (container is visible)
+        if (width > 0) {
+          setDimensions({
+            width,
+            height: 256, // Max height
+          });
+        }
       }
     };
 
+    // Initial measurement
     updateDimensions();
-    window.addEventListener("resize", updateDimensions);
-    return () => window.removeEventListener("resize", updateDimensions);
+
+    // Use ResizeObserver for more reliable resize detection
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
   }, []);
+
+  // Don't render the grid until we have valid dimensions
+  if (!dimensions || dimensions.width === 0) {
+    return (
+      <div ref={containerRef} className="w-full min-h-[70px]">
+        {/* Placeholder while measuring */}
+      </div>
+    );
+  }
+
+  // Responsive column count based on width
+  const columnCount = dimensions.width < 640 ? 2 : dimensions.width < 768 ? 3 : 4;
+  const rowCount = Math.ceil(cards.length / columnCount);
+  const columnWidth = Math.floor(dimensions.width / columnCount);
+  const rowHeight = 70; // Fixed height for each row
 
   // Render cell function for react-window
   const Cell = ({ columnIndex, rowIndex, style }: { columnIndex: number; rowIndex: number; style: React.CSSProperties }) => {
     const index = rowIndex * columnCount + columnIndex;
     const card = cards[index];
 
-    if (!card) return null;
+    if (!card) return <div style={style} />;
 
     return (
-      <div style={style}>
-        <div className="p-1">
-          <MissingCardItem
-            card={card}
-            onClick={() => onCardNavigate(card)}
-            onRightClick={(e) => onCardDetail(card, e)}
-          />
-        </div>
+      <div style={style} className="p-1">
+        <MissingCardItem
+          card={card}
+          onClick={() => onCardNavigate(card)}
+          onRightClick={(e) => onCardDetail(card, e)}
+        />
       </div>
     );
   };
@@ -375,7 +386,7 @@ function MissingCardItem({ card, onClick, onRightClick }: MissingCardItemProps) 
       className={cn(
         "flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-2",
         "hover:border-zinc-600 hover:bg-zinc-800/50 transition-colors text-left",
-        "group"
+        "group w-full h-full"
       )}
       title="Click to find in binder • Right-click for details"
     >
