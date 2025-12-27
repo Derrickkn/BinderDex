@@ -157,6 +157,14 @@ export default function TrackerSetPage() {
     updatePreferences({ includeReverseHolos: include });
   };
 
+  const handleIncludePokeballChange = (include: boolean) => {
+    updatePreferences({ includePokeball: include });
+  };
+
+  const handleIncludeMasterballChange = (include: boolean) => {
+    updatePreferences({ includeMasterball: include });
+  };
+
   // Handle card toggle
   const handleToggleCard = (variantId: string) => {
     toggleOwned.mutate(variantId);
@@ -193,6 +201,24 @@ export default function TrackerSetPage() {
     setIsBulkLoading(true);
     try {
       return await bulkActions.markReverseHolosByRarity(rarity);
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
+
+  const handleMarkPokeballsByRarity = async (rarity: string): Promise<BulkActionResult> => {
+    setIsBulkLoading(true);
+    try {
+      return await bulkActions.markPokeballsByRarity(rarity);
+    } finally {
+      setIsBulkLoading(false);
+    }
+  };
+
+  const handleMarkMasterballsByRarity = async (rarity: string): Promise<BulkActionResult> => {
+    setIsBulkLoading(true);
+    try {
+      return await bulkActions.markMasterballsByRarity(rarity);
     } finally {
       setIsBulkLoading(false);
     }
@@ -258,12 +284,22 @@ export default function TrackerSetPage() {
         onSlotConfigChange={handleSlotConfigChange}
         includePromos={currentPreferences.includePromos}
         includeReverseHolos={currentPreferences.includeReverseHolos}
+        includePokeball={currentPreferences.includePokeball}
+        includeMasterball={currentPreferences.includeMasterball}
         onIncludePromosChange={handleIncludePromosChange}
         onIncludeReverseHolosChange={handleIncludeReverseHolosChange}
+        onIncludePokeballChange={handleIncludePokeballChange}
+        onIncludeMasterballChange={handleIncludeMasterballChange}
+        hasPokeballVariants={set?.has_pokeball_variants ?? false}
+        hasMasterballVariants={set?.has_masterball_variants ?? false}
         rarities={bulkActions.rarities}
         reverseHoloRarities={bulkActions.reverseHoloRarities}
+        pokeballRarities={bulkActions.pokeballRarities}
+        masterballRarities={bulkActions.masterballRarities}
         onMarkByRarity={handleMarkByRarity}
         onMarkReverseHolosByRarity={handleMarkReverseHolosByRarity}
+        onMarkPokeballsByRarity={handleMarkPokeballsByRarity}
+        onMarkMasterballsByRarity={handleMarkMasterballsByRarity}
         onMarkAll={handleMarkAll}
         onClearAll={handleClearAll}
         isLoading={isBulkLoading}

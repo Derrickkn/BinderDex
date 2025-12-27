@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getSetRarities,
   getSetReverseHoloRarities,
+  getSetPokeballRarities,
+  getSetMasterballRarities,
   bulkMarkAsOwned,
   bulkUnmarkOwned,
   BulkMarkCriteria,
@@ -34,6 +36,28 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
     queryKey: ["setReverseHoloRarities", setId],
     queryFn: async () => {
       const result = await getSetReverseHoloRarities(setId);
+      if (result.error) throw new Error(result.error);
+      return result.data || [];
+    },
+    enabled: !!setId,
+  });
+
+  // Fetch rarities that have pokeball variants
+  const { data: pokeballRarities = [] } = useQuery({
+    queryKey: ["setPokeballRarities", setId],
+    queryFn: async () => {
+      const result = await getSetPokeballRarities(setId);
+      if (result.error) throw new Error(result.error);
+      return result.data || [];
+    },
+    enabled: !!setId,
+  });
+
+  // Fetch rarities that have masterball variants
+  const { data: masterballRarities = [] } = useQuery({
+    queryKey: ["setMasterballRarities", setId],
+    queryFn: async () => {
+      const result = await getSetMasterballRarities(setId);
       if (result.error) throw new Error(result.error);
       return result.data || [];
     },
@@ -164,6 +188,46 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
     return { count, error: null };
   };
 
+  // Mark pokeballs by rarity - OPTIMISTIC
+  const markPokeballsByRarity = async (rarity: string): Promise<BulkActionResult> => {
+    const matchFn = (card: TrackerCard) =>
+      card.variant_type === "POKEBALL" &&
+      card.rarity?.toLowerCase() === rarity.toLowerCase();
+
+    const { rollback, count } = await applyOptimisticMark(matchFn);
+
+    const criteria: BulkMarkCriteria = { type: "variantWithRarity", variantType: "POKEBALL", rarity };
+    const result = await bulkMarkAsOwned(setId, criteria, preferences);
+
+    if (result.error) {
+      rollback();
+      return { count: 0, error: result.error };
+    }
+
+    syncProgressInBackground();
+    return { count, error: null };
+  };
+
+  // Mark masterballs by rarity - OPTIMISTIC
+  const markMasterballsByRarity = async (rarity: string): Promise<BulkActionResult> => {
+    const matchFn = (card: TrackerCard) =>
+      card.variant_type === "MASTERBALL" &&
+      card.rarity?.toLowerCase() === rarity.toLowerCase();
+
+    const { rollback, count } = await applyOptimisticMark(matchFn);
+
+    const criteria: BulkMarkCriteria = { type: "variantWithRarity", variantType: "MASTERBALL", rarity };
+    const result = await bulkMarkAsOwned(setId, criteria, preferences);
+
+    if (result.error) {
+      rollback();
+      return { count: 0, error: result.error };
+    }
+
+    syncProgressInBackground();
+    return { count, error: null };
+  };
+
   // Mark all cards in set - OPTIMISTIC
   const markAll = async (): Promise<BulkActionResult> => {
     const matchFn = () => true; // Match all cards
@@ -203,8 +267,12 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
   return {
     rarities,
     reverseHoloRarities,
+    pokeballRarities,
+    masterballRarities,
     markByRarity,
     markReverseHolosByRarity,
+    markPokeballsByRarity,
+    markMasterballsByRarity,
     markAll,
     clearAll,
   };

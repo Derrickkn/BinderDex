@@ -5,9 +5,21 @@ import { ExportCard } from "./types";
  * Format variant type for display in exports
  */
 export function formatVariantForExport(variantType: string): string {
-  if (variantType === "NORMAL") {
-    return "Normal";
+  const specialFormats: Record<string, string> = {
+    'NORMAL': 'Normal',
+    'REVERSE_HOLO': 'Reverse Holo',
+    'POKEBALL': 'Pokeball',
+    'MASTERBALL': 'Masterball',
+    'FIRST_EDITION': 'First Edition',
+    'SHADOWLESS': 'Shadowless',
+    'UNLIMITED': 'Unlimited',
+  };
+
+  if (specialFormats[variantType]) {
+    return specialFormats[variantType];
   }
+
+  // Fallback: capitalize words
   return variantType
     .split("_")
     .map((word) => word.charAt(0) + word.slice(1).toLowerCase())

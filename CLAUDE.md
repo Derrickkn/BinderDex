@@ -140,7 +140,7 @@ cards: id, set_id, name, number, rarity, supertype, subtypes[], types[], hp, art
        national_dex_numbers[], image_small, image_large, is_promo, is_premium,
        is_legendary, is_mythical, generation
 
-card_variants: id, card_id, variant_type (NORMAL, REVERSE_HOLO, FIRST_EDITION, SHADOWLESS, UNLIMITED), image_url
+card_variants: id, card_id, variant_type (NORMAL, REVERSE_HOLO, FIRST_EDITION, SHADOWLESS, UNLIMITED, POKEBALL, MASTERBALL), image_url
 ```
 
 ### ChromaDex Tables
@@ -174,7 +174,7 @@ binder_slots: id, page_id, position (0-8/0-11/0-15),
               span_rows INTEGER DEFAULT 1,                    -- Slot merging
               crop_data JSONB                                 -- {x, y, zoom, rotation}
 
-master_set_preferences: id, user_id, set_id, slot_config, include_promos, include_reverse_holos
+master_set_preferences: id, user_id, set_id, slot_config, include_promos, include_reverse_holos, include_pokeball, include_masterball
 
 binder_templates: id, name, description, category, slot_config,
                   layout_data (JSONB), is_premium, preview_image_url, created_by
@@ -217,6 +217,7 @@ custom_images: id, user_id, storage_path, original_filename, file_size, uploaded
 | XY - Sun & Moon | NORMAL, REVERSE_HOLO |
 | Sword & Shield | NORMAL, REVERSE_HOLO |
 | Scarlet & Violet | NORMAL, REVERSE_HOLO (Commons/Uncommons/Rares only, NOT Double Rare+) |
+| Prismatic Evolutions (sv8pt5) | NORMAL, REVERSE_HOLO, POKEBALL (all cards), MASTERBALL (Pokémon only) |
 | Mega Evolution (2025) | NORMAL, REVERSE_HOLO (TBD) |
 
 ## Monetization Tiers

@@ -39,6 +39,8 @@ export const useTrackerStore = create<TrackerState>((set) => ({
     slotConfig: "NINE" as SlotConfig,
     includePromos: false,
     includeReverseHolos: false,
+    includePokeball: true,
+    includeMasterball: true,
   },
 
   // Actions

@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
@@ -416,6 +418,8 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          include_masterball: boolean
+          include_pokeball: boolean
           include_promos: boolean | null
           include_reverse_holos: boolean | null
           set_id: string
@@ -426,6 +430,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          include_masterball?: boolean
+          include_pokeball?: boolean
           include_promos?: boolean | null
           include_reverse_holos?: boolean | null
           set_id: string
@@ -436,6 +442,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          include_masterball?: boolean
+          include_pokeball?: boolean
           include_promos?: boolean | null
           include_reverse_holos?: boolean | null
           set_id?: string
@@ -460,10 +468,62 @@ export type Database = {
           },
         ]
       }
+      promo_cards: {
+        Row: {
+          card_name: string
+          card_type: string
+          created_at: string | null
+          id: string
+          image_large: string | null
+          image_small: string | null
+          is_pokemon_center_exclusive: boolean | null
+          product_source: string
+          promo_number: string
+          set_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          card_name: string
+          card_type: string
+          created_at?: string | null
+          id?: string
+          image_large?: string | null
+          image_small?: string | null
+          is_pokemon_center_exclusive?: boolean | null
+          product_source: string
+          promo_number: string
+          set_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          card_name?: string
+          card_type?: string
+          created_at?: string | null
+          id?: string
+          image_large?: string | null
+          image_small?: string | null
+          is_pokemon_center_exclusive?: boolean | null
+          product_source?: string
+          promo_number?: string
+          set_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_cards_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sets: {
         Row: {
           created_at: string | null
           era: string
+          has_masterball_variants: boolean | null
+          has_pokeball_variants: boolean | null
           has_reverse_holos: boolean | null
           id: string
           logo_url: string | null
@@ -478,6 +538,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           era: string
+          has_masterball_variants?: boolean | null
+          has_pokeball_variants?: boolean | null
           has_reverse_holos?: boolean | null
           id: string
           logo_url?: string | null
@@ -492,6 +554,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           era?: string
+          has_masterball_variants?: boolean | null
+          has_pokeball_variants?: boolean | null
           has_reverse_holos?: boolean | null
           id?: string
           logo_url?: string | null
@@ -633,6 +697,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_promo_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_tracked: boolean | null
+          promo_id: string
+          set_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_tracked?: boolean | null
+          promo_id: string
+          set_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_tracked?: boolean | null
+          promo_id?: string
+          set_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_promo_preferences_promo_id_fkey"
+            columns: ["promo_id"]
+            isOneToOne: false
+            referencedRelation: "promo_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_promo_preferences_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -651,6 +760,8 @@ export type Database = {
         | "FIRST_EDITION"
         | "SHADOWLESS"
         | "UNLIMITED"
+        | "POKEBALL"
+        | "MASTERBALL"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -788,6 +899,8 @@ export const Constants = {
         "FIRST_EDITION",
         "SHADOWLESS",
         "UNLIMITED",
+        "POKEBALL",
+        "MASTERBALL",
       ],
     },
   },

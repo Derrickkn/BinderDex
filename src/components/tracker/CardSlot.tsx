@@ -13,6 +13,21 @@ interface CardSlotProps {
   isHighlighted?: boolean;
 }
 
+/**
+ * Get the badge text for variant types
+ */
+function getVariantBadgeText(variantType: string): string {
+  const badges: Record<string, string> = {
+    'REVERSE_HOLO': 'RH',
+    'POKEBALL': 'PB',
+    'MASTERBALL': 'MB',
+    'FIRST_EDITION': '1E',
+    'SHADOWLESS': 'SH',
+    'UNLIMITED': 'UL',
+  };
+  return badges[variantType] ?? variantType.charAt(0);
+}
+
 export function CardSlot({
   card,
   onToggle,
@@ -141,7 +156,7 @@ export function CardSlot({
       {/* Variant indicator */}
       {card.variant_type !== "NORMAL" && (
         <div className="absolute bottom-1 left-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-zinc-300">
-          {card.variant_type === "REVERSE_HOLO" ? "RH" : card.variant_type.charAt(0)}
+          {getVariantBadgeText(card.variant_type)}
         </div>
       )}
 

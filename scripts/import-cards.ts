@@ -113,9 +113,43 @@ function detectEra(setId: string, series: string): string {
   return "Other";
 }
 
-// Determine which variants a card should have based on era and rarity
-function getVariantsForCard(era: string, rarity: string | null, supertype: string): string[] {
+// Helper to check if a card is a secret rare (number > printed_total)
+function isSecretRare(cardNumber: string, printedTotal: number): boolean {
+  const numericPart = parseInt(cardNumber.replace(/[^0-9]/g, ''), 10);
+  return !isNaN(numericPart) && numericPart > printedTotal;
+}
+
+// Determine which variants a card should have based on era, rarity, and set-specific rules
+interface VariantContext {
+  era: string;
+  rarity: string | null;
+  supertype: string;
+  setId: string;
+  cardNumber: string;
+  printedTotal: number;
+}
+
+function getVariantsForCard(ctx: VariantContext): string[] {
+  const { era, rarity, supertype, setId, cardNumber, printedTotal } = ctx;
   const variants: string[] = ["NORMAL"];
+
+  // Secret rares only get NORMAL variant (no special variants)
+  const secretRare = isSecretRare(cardNumber, printedTotal);
+  if (secretRare) {
+    return variants;
+  }
+
+  // Prismatic Evolutions (sv8pt5) special variants - only for non-secret-rares
+  if (setId === 'sv8pt5') {
+    // POKEBALL: All Pokemon and Trainer cards (not Energy)
+    if (supertype === 'Pokémon' || supertype === 'Trainer') {
+      variants.push("POKEBALL");
+    }
+    // MASTERBALL: Pokemon only
+    if (supertype === 'Pokémon') {
+      variants.push("MASTERBALL");
+    }
+  }
 
   // Trainers and Energy typically don't have reverse holos in most sets
   if (supertype !== "Pokémon") {
@@ -264,7 +298,7 @@ async function importSet(setData: RawSet) {
   return set;
 }
 
-async function importCard(cardData: RawCard, setId: string, era: string) {
+async function importCard(cardData: RawCard, setId: string, era: string, printedTotal: number) {
   const dexNumbers = cardData.nationalPokedexNumbers || [];
   const generation = getGeneration(dexNumbers);
 
@@ -298,8 +332,15 @@ async function importCard(cardData: RawCard, setId: string, era: string) {
     return null;
   }
 
-  // Create variants
-  const variantTypes = getVariantsForCard(era, cardData.rarity ?? null, cardData.supertype);
+  // Create variants with full context for set-specific rules
+  const variantTypes = getVariantsForCard({
+    era,
+    rarity: cardData.rarity ?? null,
+    supertype: cardData.supertype,
+    setId,
+    cardNumber: cardData.number,
+    printedTotal,
+  });
 
   for (const variantType of variantTypes) {
     const { error: variantError } = await supabase
@@ -399,7 +440,7 @@ async function downloadAndImport(setIds?: string[]) {
 
       for (let i = 0; i < cardsData.length; i++) {
         const cardData = cardsData[i];
-        const card = await importCard(cardData, set.id, set.era);
+        const card = await importCard(cardData, set.id, set.era, set.printed_total);
         if (card) imported++;
 
         // Show progress every 10%

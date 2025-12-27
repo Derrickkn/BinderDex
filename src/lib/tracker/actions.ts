@@ -10,6 +10,23 @@ import {
 } from "@/lib/types/tracker";
 
 /**
+ * Helper function to get sort order for variant types
+ * Ensures consistent ordering: NORMAL → REVERSE_HOLO → POKEBALL → MASTERBALL
+ */
+function getVariantSortOrder(variantType: string): number {
+  const order: Record<string, number> = {
+    'NORMAL': 0,
+    'REVERSE_HOLO': 1,
+    'POKEBALL': 2,
+    'MASTERBALL': 3,
+    'FIRST_EDITION': 4,
+    'SHADOWLESS': 5,
+    'UNLIMITED': 6,
+  };
+  return order[variantType] ?? 99;
+}
+
+/**
  * Get all sets that have cards in the database
  */
 export async function getAvailableSets(): Promise<{
@@ -249,7 +266,9 @@ export async function getSetVariantsWithCollection(
       // Filter variants based on preferences
       const shouldInclude =
         variant.variant_type === "NORMAL" ||
-        (variant.variant_type === "REVERSE_HOLO" && preferences.includeReverseHolos);
+        (variant.variant_type === "REVERSE_HOLO" && preferences.includeReverseHolos) ||
+        (variant.variant_type === "POKEBALL" && preferences.includePokeball) ||
+        (variant.variant_type === "MASTERBALL" && preferences.includeMasterball);
 
       if (shouldInclude) {
         trackerCards.push({
@@ -294,8 +313,8 @@ export async function getSetVariantsWithCollection(
       if (strCompare !== 0) return strCompare;
     }
 
-    // NORMAL before REVERSE_HOLO
-    return a.variant_type.localeCompare(b.variant_type);
+    // Sort by variant type order: NORMAL → REVERSE_HOLO → POKEBALL → MASTERBALL
+    return getVariantSortOrder(a.variant_type) - getVariantSortOrder(b.variant_type);
   });
 
   return { data: trackerCards, error: null };
@@ -389,8 +408,8 @@ export async function getSetVariants(
       if (strCompare !== 0) return strCompare;
     }
 
-    // NORMAL before REVERSE_HOLO
-    return a.variant_type.localeCompare(b.variant_type);
+    // Sort by variant type order: NORMAL → REVERSE_HOLO → POKEBALL → MASTERBALL
+    return getVariantSortOrder(a.variant_type) - getVariantSortOrder(b.variant_type);
   });
 
   return { data: cardsWithVariants, error: null };
@@ -473,6 +492,8 @@ export async function getTrackerPreferences(setId: string): Promise<{
         slotConfig: "NINE",
         includePromos: false,
         includeReverseHolos: false,
+        includePokeball: true,
+        includeMasterball: true,
       },
       error: null,
     };
@@ -497,6 +518,8 @@ export async function getTrackerPreferences(setId: string): Promise<{
         slotConfig: "NINE",
         includePromos: false,
         includeReverseHolos: false,
+        includePokeball: true,
+        includeMasterball: true,
       },
       error: null,
     };
@@ -507,6 +530,8 @@ export async function getTrackerPreferences(setId: string): Promise<{
       slotConfig: prefs.slot_config,
       includePromos: prefs.include_promos ?? false,
       includeReverseHolos: prefs.include_reverse_holos ?? false,
+      includePokeball: prefs.include_pokeball ?? true,
+      includeMasterball: prefs.include_masterball ?? true,
     },
     error: null,
   };
@@ -544,6 +569,12 @@ export async function updateTrackerPreferences(
   }
   if (preferences.includeReverseHolos !== undefined) {
     updateData.include_reverse_holos = preferences.includeReverseHolos;
+  }
+  if (preferences.includePokeball !== undefined) {
+    updateData.include_pokeball = preferences.includePokeball;
+  }
+  if (preferences.includeMasterball !== undefined) {
+    updateData.include_masterball = preferences.includeMasterball;
   }
 
   const { error } = await supabase.from("master_set_preferences").upsert(
@@ -941,8 +972,8 @@ export async function getSetProgress(
 export type BulkMarkCriteria =
   | { type: "all" }
   | { type: "rarity"; rarity: string }
-  | { type: "variant"; variantType: "NORMAL" | "REVERSE_HOLO" }
-  | { type: "variantWithRarity"; variantType: "REVERSE_HOLO"; rarity: string }
+  | { type: "variant"; variantType: "NORMAL" | "REVERSE_HOLO" | "POKEBALL" | "MASTERBALL" }
+  | { type: "variantWithRarity"; variantType: "REVERSE_HOLO" | "POKEBALL" | "MASTERBALL"; rarity: string }
   | { type: "unowned" };
 
 export async function bulkMarkAsOwned(
@@ -1172,6 +1203,62 @@ export async function getSetReverseHoloRarities(setId: string): Promise<{
   return { data: rarities as string[], error: null };
 }
 
+export async function getSetPokeballRarities(setId: string): Promise<{
+  data: string[] | null;
+  error: string | null;
+}> {
+  const supabase = await createClient();
+
+  // Get cards that have POKEBALL variants
+  const { data: cards, error } = await supabase
+    .from("cards")
+    .select(`
+      rarity,
+      card_variants!inner(variant_type)
+    `)
+    .eq("set_id", setId)
+    .eq("card_variants.variant_type", "POKEBALL")
+    .not("rarity", "is", null);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  // Get unique rarities
+  const uniqueRarities = new Set(cards.map(c => c.rarity).filter(Boolean));
+  const rarities = Array.from(uniqueRarities).sort();
+
+  return { data: rarities as string[], error: null };
+}
+
+export async function getSetMasterballRarities(setId: string): Promise<{
+  data: string[] | null;
+  error: string | null;
+}> {
+  const supabase = await createClient();
+
+  // Get cards that have MASTERBALL variants
+  const { data: cards, error } = await supabase
+    .from("cards")
+    .select(`
+      rarity,
+      card_variants!inner(variant_type)
+    `)
+    .eq("set_id", setId)
+    .eq("card_variants.variant_type", "MASTERBALL")
+    .not("rarity", "is", null);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  // Get unique rarities
+  const uniqueRarities = new Set(cards.map(c => c.rarity).filter(Boolean));
+  const rarities = Array.from(uniqueRarities).sort();
+
+  return { data: rarities as string[], error: null };
+}
+
 
 /**
  * Untrack a specific promo card
@@ -1257,7 +1344,7 @@ export async function getHiddenPromoCount(
     return { data: 0, error: null };
   }
 
-  const { data, error, count } = await supabase
+  const { error, count } = await supabase
     .from("user_promo_preferences")
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id)

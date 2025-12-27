@@ -55,6 +55,8 @@ export interface TrackerPreferences {
   slotConfig: SlotConfig;
   includePromos: boolean;
   includeReverseHolos: boolean;
+  includePokeball: boolean;
+  includeMasterball: boolean;
 }
 
 export interface CollectionEntryUpdate {

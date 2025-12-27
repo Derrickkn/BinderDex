@@ -10,6 +10,7 @@ export const variantKeys = {
   set: (setId: string) => [...variantKeys.all, setId] as const,
   // Deprecated: kept for backward compatibility with other hooks
   // Use variantKeys.set() instead - preferences are now filtered client-side
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   withPreferences: (setId: string, _preferences: TrackerPreferences) =>
     [...variantKeys.all, setId] as const,
 };
@@ -20,11 +21,13 @@ export function useSetVariants(setId: string, preferences: TrackerPreferences) {
   const allVariantsQuery = useQuery({
     queryKey: variantKeys.set(setId),
     queryFn: async () => {
-      // Fetch ALL variants: promos + reverse holos included
+      // Fetch ALL variants: promos + reverse holos + special variants included
       const result = await getSetVariantsWithCollection(setId, {
         slotConfig: preferences.slotConfig,
         includePromos: true, // Always fetch promos
         includeReverseHolos: true, // Always fetch reverse holos
+        includePokeball: true, // Always fetch pokeball variants
+        includeMasterball: true, // Always fetch masterball variants
       });
 
       if (result.error) {
@@ -52,9 +55,19 @@ export function useSetVariants(setId: string, preferences: TrackerPreferences) {
         return false;
       }
 
+      // Filter pokeball variants based on preference
+      if (!preferences.includePokeball && variant.variant_type === "POKEBALL") {
+        return false;
+      }
+
+      // Filter masterball variants based on preference
+      if (!preferences.includeMasterball && variant.variant_type === "MASTERBALL") {
+        return false;
+      }
+
       return true;
     });
-  }, [allVariantsQuery.data, preferences.includePromos, preferences.includeReverseHolos]);
+  }, [allVariantsQuery.data, preferences.includePromos, preferences.includeReverseHolos, preferences.includePokeball, preferences.includeMasterball]);
 
   // Return modified query object with filtered data
   return {

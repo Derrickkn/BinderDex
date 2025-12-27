@@ -23,13 +23,24 @@ interface TrackerToolbarProps {
   // Toggles
   includePromos: boolean;
   includeReverseHolos: boolean;
+  includePokeball: boolean;
+  includeMasterball: boolean;
   onIncludePromosChange: (include: boolean) => void;
   onIncludeReverseHolosChange: (include: boolean) => void;
+  onIncludePokeballChange: (include: boolean) => void;
+  onIncludeMasterballChange: (include: boolean) => void;
+  // Set capabilities
+  hasPokeballVariants?: boolean;
+  hasMasterballVariants?: boolean;
   // Quick Fill
   rarities: string[];
   reverseHoloRarities: string[];
+  pokeballRarities: string[];
+  masterballRarities: string[];
   onMarkByRarity: (rarity: string) => Promise<BulkActionResult>;
   onMarkReverseHolosByRarity: (rarity: string) => Promise<BulkActionResult>;
+  onMarkPokeballsByRarity: (rarity: string) => Promise<BulkActionResult>;
+  onMarkMasterballsByRarity: (rarity: string) => Promise<BulkActionResult>;
   onMarkAll: () => Promise<BulkActionResult>;
   onClearAll: () => Promise<BulkActionResult>;
   // Loading states
@@ -87,19 +98,28 @@ export function TrackerToolbar({
   onSlotConfigChange,
   includePromos,
   includeReverseHolos,
+  includePokeball,
+  includeMasterball,
   onIncludePromosChange,
   onIncludeReverseHolosChange,
+  onIncludePokeballChange,
+  onIncludeMasterballChange,
+  hasPokeballVariants = false,
+  hasMasterballVariants = false,
   rarities,
   reverseHoloRarities,
+  pokeballRarities,
+  masterballRarities,
   onMarkByRarity,
   onMarkReverseHolosByRarity,
+  onMarkPokeballsByRarity,
+  onMarkMasterballsByRarity,
   onMarkAll,
   onClearAll,
   isLoading = false,
   isUpdating = false,
 }: TrackerToolbarProps) {
   const [quickFillOpen, setQuickFillOpen] = useState(false);
-  const [activeAction, setActiveAction] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "info" | "error" } | null>(null);
   const [confirmAction, setConfirmAction] = useState<"mark-all" | "clear-all" | null>(null);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
@@ -107,6 +127,8 @@ export function TrackerToolbar({
   // Selected rarities for toggle mode
   const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
   const [selectedReverseHolos, setSelectedReverseHolos] = useState<string[]>([]);
+  const [selectedPokeballs, setSelectedPokeballs] = useState<string[]>([]);
+  const [selectedMasterballs, setSelectedMasterballs] = useState<string[]>([]);
 
   const mobileButtonRef = useRef<HTMLButtonElement>(null);
   const desktopButtonRef = useRef<HTMLButtonElement>(null);
@@ -131,8 +153,24 @@ export function TrackerToolbar({
     );
   };
 
+  const togglePokeball = (rarity: string) => {
+    setSelectedPokeballs(prev =>
+      prev.includes(rarity)
+        ? prev.filter(r => r !== rarity)
+        : [...prev, rarity]
+    );
+  };
+
+  const toggleMasterball = (rarity: string) => {
+    setSelectedMasterballs(prev =>
+      prev.includes(rarity)
+        ? prev.filter(r => r !== rarity)
+        : [...prev, rarity]
+    );
+  };
+
   // Determine if any selections are made
-  const hasSelections = selectedRarities.length > 0 || selectedReverseHolos.length > 0;
+  const hasSelections = selectedRarities.length > 0 || selectedReverseHolos.length > 0 || selectedPokeballs.length > 0 || selectedMasterballs.length > 0;
   const markButtonText = hasSelections ? "Mark Selected" : "Mark All";
 
   // Handle opening dropdown with immediate position calculation
@@ -173,35 +211,6 @@ export function TrackerToolbar({
     }
   }, [notification]);
 
-  const handleAction = async (actionId: string, action: () => Promise<BulkActionResult>) => {
-    if (isLoading) return;
-    setActiveAction(actionId);
-    setNotification(null);
-    try {
-      const result = await action();
-      if (result.error) {
-        setNotification({ message: result.error, type: "error" });
-      }
-      // Success messages removed - silent success for better UX
-    } finally {
-      setActiveAction(null);
-    }
-  };
-
-  const handleClearAction = async (actionId: string, action: () => Promise<BulkActionResult>) => {
-    if (isLoading) return;
-    setActiveAction(actionId);
-    setNotification(null);
-    try {
-      const result = await action();
-      if (result.error) {
-        setNotification({ message: result.error, type: "error" });
-      }
-      // Success messages removed - silent success for better UX
-    } finally {
-      setActiveAction(null);
-    }
-  };
 
   return (
     <>
@@ -241,6 +250,24 @@ export function TrackerToolbar({
                 onClick={() => onIncludeReverseHolosChange(!includeReverseHolos)}
                 disabled={isUpdating}
               />
+              {hasPokeballVariants && (
+                <TogglePill
+                  label="Pokeball"
+                  shortLabel="PB"
+                  active={includePokeball}
+                  onClick={() => onIncludePokeballChange(!includePokeball)}
+                  disabled={isUpdating}
+                />
+              )}
+              {hasMasterballVariants && (
+                <TogglePill
+                  label="Masterball"
+                  shortLabel="MB"
+                  active={includeMasterball}
+                  onClick={() => onIncludeMasterballChange(!includeMasterball)}
+                  disabled={isUpdating}
+                />
+              )}
               <TogglePill
                 label="Promos"
                 active={includePromos}
@@ -326,6 +353,24 @@ export function TrackerToolbar({
                   onClick={() => onIncludeReverseHolosChange(!includeReverseHolos)}
                   disabled={isUpdating}
                 />
+                {hasPokeballVariants && (
+                  <TogglePill
+                    label="Pokeball"
+                    shortLabel="PB"
+                    active={includePokeball}
+                    onClick={() => onIncludePokeballChange(!includePokeball)}
+                    disabled={isUpdating}
+                  />
+                )}
+                {hasMasterballVariants && (
+                  <TogglePill
+                    label="Masterball"
+                    shortLabel="MB"
+                    active={includeMasterball}
+                    onClick={() => onIncludeMasterballChange(!includeMasterball)}
+                    disabled={isUpdating}
+                  />
+                )}
                 <TogglePill
                   label="Promos"
                   active={includePromos}
@@ -406,6 +451,46 @@ export function TrackerToolbar({
               </div>
             )}
 
+            {/* Pokeballs */}
+            {includePokeball && pokeballRarities.length > 0 && (
+              <div>
+                <div className="text-[10px] text-zinc-500 mb-1.5 uppercase tracking-wide">Pokeballs</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {sortRarities(pokeballRarities).map((rarity) => (
+                    <QuickFillButton
+                      key={`pb-${rarity}`}
+                      onClick={() => togglePokeball(rarity)}
+                      disabled={isLoading}
+                      variant={selectedPokeballs.includes(rarity) ? "selected" : "default"}
+                      icon={selectedPokeballs.includes(rarity) ? <Check className="h-3 w-3" /> : <Layers className="h-3 w-3" />}
+                    >
+                      {getRarityDisplay(rarity)}
+                    </QuickFillButton>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Masterballs */}
+            {includeMasterball && masterballRarities.length > 0 && (
+              <div>
+                <div className="text-[10px] text-zinc-500 mb-1.5 uppercase tracking-wide">Masterballs</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {sortRarities(masterballRarities).map((rarity) => (
+                    <QuickFillButton
+                      key={`mb-${rarity}`}
+                      onClick={() => toggleMasterball(rarity)}
+                      disabled={isLoading}
+                      variant={selectedMasterballs.includes(rarity) ? "selected" : "default"}
+                      icon={selectedMasterballs.includes(rarity) ? <Check className="h-3 w-3" /> : <Layers className="h-3 w-3" />}
+                    >
+                      {getRarityDisplay(rarity)}
+                    </QuickFillButton>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Loading state */}
             {sortedRarities.length === 0 && (
               <div className="flex items-center justify-center py-4 text-xs text-zinc-500">
@@ -421,7 +506,7 @@ export function TrackerToolbar({
             <div className="flex gap-2">
               <QuickFillButton
                 onClick={() => setConfirmAction("mark-all")}
-                isLoading={activeAction === "mark-all"}
+                isLoading={isLoading && confirmAction === "mark-all"}
                 disabled={isLoading}
                 icon={<CheckCircle2 className="h-3 w-3" />}
                 variant="success"
@@ -431,7 +516,7 @@ export function TrackerToolbar({
               </QuickFillButton>
               <QuickFillButton
                 onClick={() => setConfirmAction("clear-all")}
-                isLoading={activeAction === "clear-all"}
+                isLoading={isLoading && confirmAction === "clear-all"}
                 disabled={isLoading}
                 icon={<Circle className="h-3 w-3" />}
                 variant="danger"
@@ -457,7 +542,9 @@ export function TrackerToolbar({
                 // Execute all rarity marking operations in parallel using Promise.all
                 const allOperations = [
                   ...selectedRarities.map(rarity => onMarkByRarity(rarity)),
-                  ...selectedReverseHolos.map(rarity => onMarkReverseHolosByRarity(rarity))
+                  ...selectedReverseHolos.map(rarity => onMarkReverseHolosByRarity(rarity)),
+                  ...selectedPokeballs.map(rarity => onMarkPokeballsByRarity(rarity)),
+                  ...selectedMasterballs.map(rarity => onMarkMasterballsByRarity(rarity))
                 ];
 
                 // Close modal immediately - optimistic updates already made UI correct
@@ -466,6 +553,8 @@ export function TrackerToolbar({
                 // Clear selections immediately
                 setSelectedRarities([]);
                 setSelectedReverseHolos([]);
+                setSelectedPokeballs([]);
+                setSelectedMasterballs([]);
 
                 // Execute operations in background and show notification when done
                 Promise.all(allOperations)
@@ -518,8 +607,8 @@ export function TrackerToolbar({
             }
           }}
           onCancel={() => setConfirmAction(null)}
-          isLoading={activeAction === confirmAction}
-          selectedCount={hasSelections ? selectedRarities.length + selectedReverseHolos.length : undefined}
+          isLoading={isLoading}
+          selectedCount={hasSelections ? selectedRarities.length + selectedReverseHolos.length + selectedPokeballs.length + selectedMasterballs.length : undefined}
         />
       )}
     </>
