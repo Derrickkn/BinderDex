@@ -26,3 +26,19 @@ vi.mock('next/navigation', () => ({
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
 process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000'
+
+// Mock Image constructor for preloading tests
+global.Image = class Image {
+  src = ''
+  onload: (() => void) | null = null
+  onerror: (() => void) | null = null
+} as any
+
+// Mock Next.js Image component
+vi.mock('next/image', () => ({
+  __esModule: true,
+  default: (props: any) => {
+    // eslint-disable-next-line jsx-a11y/alt-text, @next/next/no-img-element
+    return <img {...props} />
+  },
+}))
