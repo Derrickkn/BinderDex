@@ -1,7 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactNode } from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { renderHook, waitFor, act, createQueryClientWrapper } from '@/test/utils'
 import { useTrackerPreferences, preferencesKeys } from '../useTrackerPreferences'
 import { useTrackerStore } from '@/hooks/useTrackerStore'
 import { mockTrackerPreferences } from '@/test/mockData/trackerMocks'
@@ -17,24 +15,8 @@ vi.mock('@/lib/tracker/actions', () => ({
 import { getTrackerPreferences, updateTrackerPreferences } from '@/lib/tracker/actions'
 
 describe('useTrackerPreferences', () => {
-  let queryClient: QueryClient
-  let wrapper: ({ children }: { children: ReactNode }) => JSX.Element
-
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // Create QueryClient before each test
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false, gcTime: 0 },
-        mutations: { retry: false },
-      },
-    })
-
-    // Create wrapper
-    wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    )
 
     // Reset Zustand store to initial state
     useTrackerStore.setState({
@@ -52,13 +34,10 @@ describe('useTrackerPreferences', () => {
     })
   })
 
-  afterEach(() => {
-    queryClient?.clear()
-  })
-
   const setId = 'me1'
 
   it('loads preferences from server and syncs to store', async () => {
+    const { queryClient, wrapper } = createQueryClientWrapper()
     const serverPreferences: TrackerPreferences = {
       slotConfig: 'TWELVE',
       includePromos: true,
@@ -91,13 +70,17 @@ describe('useTrackerPreferences', () => {
   })
 
   it('optimistically updates preferences in query cache and store', async () => {
+    const { queryClient, wrapper } = createQueryClientWrapper()
     const initialPreferences = mockTrackerPreferences
     queryClient.setQueryData(preferencesKeys.set(setId), initialPreferences)
 
-    vi.mocked(updateTrackerPreferences).mockResolvedValue({
-      data: {},
-      error: null,
-    })
+    // Mock server response (delayed to capture optimistic state)
+    vi.mocked(updateTrackerPreferences).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: {}, error: null }), 50)
+        )
+    )
 
     const { result } = renderHook(() => useTrackerPreferences(setId), {
       wrapper,
@@ -108,7 +91,10 @@ describe('useTrackerPreferences', () => {
 
     // Update preferences
     const newPreferences = { includePromos: false, includeReverseHolos: false }
-    result.current.updatePreferences(newPreferences)
+    await act(async () => {
+      result.current.updatePreferences(newPreferences)
+      await Promise.resolve()
+    })
 
     // Should update Zustand store immediately
     const storePreferences = useTrackerStore.getState().preferences
@@ -127,14 +113,25 @@ describe('useTrackerPreferences', () => {
   })
 
   it('rolls back on server error', async () => {
+    const { queryClient, wrapper } = createQueryClientWrapper()
     const initialPreferences = mockTrackerPreferences
     queryClient.setQueryData(preferencesKeys.set(setId), initialPreferences)
 
-    // Mock server error
-    vi.mocked(updateTrackerPreferences).mockResolvedValue({
-      data: null,
-      error: 'Update failed',
-    })
+    // Mock getTrackerPreferences to return initial state (for refetch after onSettled)
+    vi.mocked(getTrackerPreferences).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: initialPreferences, error: null }), 50)
+        )
+    )
+
+    // Mock server error (delayed to capture optimistic state)
+    vi.mocked(updateTrackerPreferences).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: null, error: 'Update failed' }), 50)
+        )
+    )
 
     const { result } = renderHook(() => useTrackerPreferences(setId), {
       wrapper,
@@ -143,7 +140,10 @@ describe('useTrackerPreferences', () => {
     await waitFor(() => expect(result.current.data).toEqual(initialPreferences))
 
     // Attempt to update
-    result.current.updatePreferences({ slotConfig: 'SIXTEEN' })
+    await act(async () => {
+      result.current.updatePreferences({ slotConfig: 'SIXTEEN' })
+      await Promise.resolve()
+    })
 
     // Optimistic update applies
     let cachedData = queryClient.getQueryData<TrackerPreferences>(
@@ -164,6 +164,7 @@ describe('useTrackerPreferences', () => {
   })
 
   it('preserves other preference fields during partial update', async () => {
+    const { queryClient, wrapper } = createQueryClientWrapper()
     const initialPreferences: TrackerPreferences = {
       slotConfig: 'NINE',
       includePromos: true,
@@ -173,10 +174,27 @@ describe('useTrackerPreferences', () => {
     }
     queryClient.setQueryData(preferencesKeys.set(setId), initialPreferences)
 
-    vi.mocked(updateTrackerPreferences).mockResolvedValue({
-      data: {},
-      error: null,
-    })
+    // Expected state after update
+    const expectedAfterUpdate: TrackerPreferences = {
+      ...initialPreferences,
+      slotConfig: 'TWELVE',
+    }
+
+    // Mock getTrackerPreferences to return updated state (for refetch after onSettled)
+    vi.mocked(getTrackerPreferences).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: expectedAfterUpdate, error: null }), 50)
+        )
+    )
+
+    // Mock server response (delayed to capture optimistic state)
+    vi.mocked(updateTrackerPreferences).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: {}, error: null }), 50)
+        )
+    )
 
     const { result } = renderHook(() => useTrackerPreferences(setId), {
       wrapper,
@@ -185,7 +203,10 @@ describe('useTrackerPreferences', () => {
     await waitFor(() => expect(result.current.data).toEqual(initialPreferences))
 
     // Update only one field
-    result.current.updatePreferences({ slotConfig: 'TWELVE' })
+    await act(async () => {
+      result.current.updatePreferences({ slotConfig: 'TWELVE' })
+      await Promise.resolve()
+    })
 
     const cachedData = queryClient.getQueryData<TrackerPreferences>(
       preferencesKeys.set(setId)
@@ -199,12 +220,16 @@ describe('useTrackerPreferences', () => {
   })
 
   it('handles multiple rapid preference changes', async () => {
+    const { queryClient, wrapper } = createQueryClientWrapper()
     queryClient.setQueryData(preferencesKeys.set(setId), mockTrackerPreferences)
 
-    vi.mocked(updateTrackerPreferences).mockResolvedValue({
-      data: {},
-      error: null,
-    })
+    // Mock server response (delayed to capture optimistic state)
+    vi.mocked(updateTrackerPreferences).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: {}, error: null }), 50)
+        )
+    )
 
     const { result } = renderHook(() => useTrackerPreferences(setId), {
       wrapper,
@@ -213,11 +238,17 @@ describe('useTrackerPreferences', () => {
     await waitFor(() => expect(result.current.data).toBeTruthy())
 
     // First update
-    result.current.updatePreferences({ includePromos: true })
+    await act(async () => {
+      result.current.updatePreferences({ includePromos: true })
+      await Promise.resolve()
+    })
     expect(useTrackerStore.getState().preferences.includePromos).toBe(true)
 
     // Second update (before first completes)
-    result.current.updatePreferences({ includeReverseHolos: true })
+    await act(async () => {
+      result.current.updatePreferences({ includeReverseHolos: true })
+      await Promise.resolve()
+    })
     expect(useTrackerStore.getState().preferences.includeReverseHolos).toBe(true)
 
     // Both should be true
@@ -228,12 +259,16 @@ describe('useTrackerPreferences', () => {
   })
 
   it('resets page to 0 when preferences change', async () => {
+    const { queryClient, wrapper } = createQueryClientWrapper()
     queryClient.setQueryData(preferencesKeys.set(setId), mockTrackerPreferences)
 
-    vi.mocked(updateTrackerPreferences).mockResolvedValue({
-      data: {},
-      error: null,
-    })
+    // Mock server response (delayed to capture optimistic state)
+    vi.mocked(updateTrackerPreferences).mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ data: {}, error: null }), 50)
+        )
+    )
 
     // Set current page to something other than 0
     useTrackerStore.setState({ currentPage: 5 })
@@ -245,13 +280,17 @@ describe('useTrackerPreferences', () => {
     await waitFor(() => expect(result.current.data).toBeTruthy())
 
     // Update preferences
-    result.current.updatePreferences({ slotConfig: 'TWELVE' })
+    await act(async () => {
+      result.current.updatePreferences({ slotConfig: 'TWELVE' })
+      await Promise.resolve()
+    })
 
     // Page should reset to 0
     expect(useTrackerStore.getState().currentPage).toBe(0)
   })
 
   it('does not query when setId is empty', () => {
+    const { wrapper } = createQueryClientWrapper()
     const { result } = renderHook(() => useTrackerPreferences(''), {
       wrapper,
     })

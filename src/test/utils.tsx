@@ -43,7 +43,7 @@ export function createQueryClientWrapper() {
     defaultOptions: {
       queries: {
         retry: false,
-        gcTime: 0,
+        gcTime: Infinity, // Keep query data for the duration of the test
       },
       mutations: {
         retry: false,

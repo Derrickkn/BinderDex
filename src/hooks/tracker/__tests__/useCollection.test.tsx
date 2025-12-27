@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor, createQueryClientWrapper } from '@/test/utils'
+import { renderHook, waitFor, createQueryClientWrapper, act } from '@/test/utils'
 import {
   useToggleOwned,
   useUpdateCollectionEntry,
@@ -64,7 +64,11 @@ describe('Collection Hooks - Optimistic Updates', () => {
       })
 
       // Trigger mutation
-      result.current.mutate('variant-1')
+      await act(async () => {
+        result.current.mutate('variant-1')
+        // Wait a tick for optimistic update to apply
+        await Promise.resolve()
+      })
 
       // Optimistic update should apply IMMEDIATELY (before server responds)
       const updatedData = queryClient.getQueryData<TrackerCard[]>(queryKey)
@@ -92,7 +96,10 @@ describe('Collection Hooks - Optimistic Updates', () => {
         wrapper,
       })
 
-      result.current.mutate('variant-1')
+      await act(async () => {
+        result.current.mutate('variant-1')
+        await Promise.resolve()
+      })
 
       // Optimistic update should set owned to false
       const updatedData = queryClient.getQueryData<TrackerCard[]>(queryKey)
@@ -111,17 +118,22 @@ describe('Collection Hooks - Optimistic Updates', () => {
       const initialCards = [card]
       queryClient.setQueryData<TrackerCard[]>(queryKey, initialCards)
 
-      // Mock server error
-      vi.mocked(toggleCardOwned).mockResolvedValue({
-        data: null,
-        error: 'Database error',
-      })
+      // Mock server error (delayed to capture optimistic state)
+      vi.mocked(toggleCardOwned).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: null, error: 'Database error' }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useToggleOwned(setId, preferences), {
         wrapper,
       })
 
-      result.current.mutate('variant-1')
+      await act(async () => {
+        result.current.mutate('variant-1')
+        await Promise.resolve()
+      })
 
       // Optimistic update should apply first
       let updatedData = queryClient.getQueryData<TrackerCard[]>(queryKey)
@@ -144,17 +156,23 @@ describe('Collection Hooks - Optimistic Updates', () => {
       const cards = mockTrackerCards(3)
       queryClient.setQueryData<TrackerCard[]>(queryKey, cards)
 
-      vi.mocked(toggleCardOwned).mockResolvedValue({
-        data: { owned: true },
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(toggleCardOwned).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: { owned: true }, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useToggleOwned(setId, preferences), {
         wrapper,
       })
 
       // Toggle only the second card
-      result.current.mutate('variant-2')
+      await act(async () => {
+        result.current.mutate('variant-2')
+        await Promise.resolve()
+      })
 
       const updatedData = queryClient.getQueryData<TrackerCard[]>(queryKey)
       expect(updatedData).toHaveLength(3)
@@ -172,23 +190,32 @@ describe('Collection Hooks - Optimistic Updates', () => {
       const card = createMockCard({ variant_id: 'variant-1', owned: false, quantity: 0 })
       queryClient.setQueryData<TrackerCard[]>(queryKey, [card])
 
-      vi.mocked(toggleCardOwned).mockResolvedValue({
-        data: { owned: true },
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(toggleCardOwned).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: { owned: true }, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useToggleOwned(setId, preferences), {
         wrapper,
       })
 
       // First toggle
-      result.current.mutate('variant-1')
+      await act(async () => {
+        result.current.mutate('variant-1')
+        await Promise.resolve()
+      })
       let data = queryClient.getQueryData<TrackerCard[]>(queryKey)
       expect(data?.[0].owned).toBe(true)
 
       // Second toggle (should toggle back)
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
-      result.current.mutate('variant-1')
+      await act(async () => {
+        result.current.mutate('variant-1')
+        await Promise.resolve()
+      })
       data = queryClient.getQueryData<TrackerCard[]>(queryKey)
       expect(data?.[0].owned).toBe(false)
     })
@@ -210,19 +237,25 @@ describe('Collection Hooks - Optimistic Updates', () => {
       })
       queryClient.setQueryData<TrackerCard[]>(queryKey, [card])
 
-      vi.mocked(updateCollectionEntry).mockResolvedValue({
-        data: {},
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(updateCollectionEntry).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: {}, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(
         () => useUpdateCollectionEntry(setId, preferences),
         { wrapper }
       )
 
-      result.current.mutate({
-        variantId: 'variant-1',
-        data: { quantity: 3, condition: 'NM' },
+      await act(async () => {
+        result.current.mutate({
+          variantId: 'variant-1',
+          data: { quantity: 3, condition: 'NM' },
+        })
+        await Promise.resolve()
       })
 
       // Optimistic update should apply immediately
@@ -245,19 +278,25 @@ describe('Collection Hooks - Optimistic Updates', () => {
       })
       queryClient.setQueryData<TrackerCard[]>(queryKey, [card])
 
-      vi.mocked(updateCollectionEntry).mockResolvedValue({
-        data: {},
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(updateCollectionEntry).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: {}, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(
         () => useUpdateCollectionEntry(setId, preferences),
         { wrapper }
       )
 
-      result.current.mutate({
-        variantId: 'variant-1',
-        data: { quantity: 0 },
+      await act(async () => {
+        result.current.mutate({
+          variantId: 'variant-1',
+          data: { quantity: 0 },
+        })
+        await Promise.resolve()
       })
 
       const updatedData = queryClient.getQueryData<TrackerCard[]>(queryKey)
@@ -278,19 +317,25 @@ describe('Collection Hooks - Optimistic Updates', () => {
       })
       queryClient.setQueryData<TrackerCard[]>(queryKey, [card])
 
-      vi.mocked(updateCollectionEntry).mockResolvedValue({
-        data: null,
-        error: 'Update failed',
-      })
+      // Mock server error (delayed to capture optimistic state)
+      vi.mocked(updateCollectionEntry).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: null, error: 'Update failed' }), 50)
+          )
+      )
 
       const { result } = renderHook(
         () => useUpdateCollectionEntry(setId, preferences),
         { wrapper }
       )
 
-      result.current.mutate({
-        variantId: 'variant-1',
-        data: { quantity: 5, condition: 'NM' },
+      await act(async () => {
+        result.current.mutate({
+          variantId: 'variant-1',
+          data: { quantity: 5, condition: 'NM' },
+        })
+        await Promise.resolve()
       })
 
       // Optimistic update applies
@@ -319,10 +364,13 @@ describe('Collection Hooks - Optimistic Updates', () => {
       })
       queryClient.setQueryData<TrackerCard[]>(queryKey, [card])
 
-      vi.mocked(updateCollectionEntry).mockResolvedValue({
-        data: {},
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(updateCollectionEntry).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: {}, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(
         () => useUpdateCollectionEntry(setId, preferences),
@@ -330,9 +378,12 @@ describe('Collection Hooks - Optimistic Updates', () => {
       )
 
       // Only update quantity
-      result.current.mutate({
-        variantId: 'variant-1',
-        data: { quantity: 3 },
+      await act(async () => {
+        result.current.mutate({
+          variantId: 'variant-1',
+          data: { quantity: 3 },
+        })
+        await Promise.resolve()
       })
 
       const updatedData = queryClient.getQueryData<TrackerCard[]>(queryKey)
@@ -363,16 +414,22 @@ describe('Collection Hooks - Optimistic Updates', () => {
       queryClient.setQueryData<TrackerCard[]>(queryKey, [regularCard, promoCard])
       queryClient.setQueryData<TrackerCard[]>(hiddenQueryKey, [])
 
-      vi.mocked(untrackPromo).mockResolvedValue({
-        data: {},
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(untrackPromo).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: {}, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useUntrackPromo(setId, preferences), {
         wrapper,
       })
 
-      result.current.mutate('promo-1')
+      await act(async () => {
+        result.current.mutate('promo-1')
+        await Promise.resolve()
+      })
 
       // Main list should no longer have the promo
       const mainData = queryClient.getQueryData<TrackerCard[]>(queryKey)
@@ -398,16 +455,22 @@ describe('Collection Hooks - Optimistic Updates', () => {
       queryClient.setQueryData<TrackerCard[]>(queryKey, initialMainCards)
       queryClient.setQueryData<TrackerCard[]>(hiddenQueryKey, initialHiddenCards)
 
-      vi.mocked(untrackPromo).mockResolvedValue({
-        data: null,
-        error: 'Untrack failed',
-      })
+      // Mock server error (delayed to capture optimistic state)
+      vi.mocked(untrackPromo).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: null, error: 'Untrack failed' }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useUntrackPromo(setId, preferences), {
         wrapper,
       })
 
-      result.current.mutate('promo-1')
+      await act(async () => {
+        result.current.mutate('promo-1')
+        await Promise.resolve()
+      })
 
       // Optimistic update applies
       expect(queryClient.getQueryData<TrackerCard[]>(queryKey)).toHaveLength(0)
@@ -433,16 +496,22 @@ describe('Collection Hooks - Optimistic Updates', () => {
       queryClient.setQueryData<TrackerCard[]>(queryKey, [promoCard1, promoCard2])
       queryClient.setQueryData<TrackerCard[]>(hiddenQueryKey, [promoCard1])
 
-      vi.mocked(untrackPromo).mockResolvedValue({
-        data: {},
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(untrackPromo).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: {}, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useUntrackPromo(setId, preferences), {
         wrapper,
       })
 
-      result.current.mutate('promo-2')
+      await act(async () => {
+        result.current.mutate('promo-2')
+        await Promise.resolve()
+      })
 
       // Hidden list should now have both promos
       const hiddenData = queryClient.getQueryData<TrackerCard[]>(hiddenQueryKey)
@@ -468,16 +537,22 @@ describe('Collection Hooks - Optimistic Updates', () => {
       queryClient.setQueryData<TrackerCard[]>(queryKey, [regularCard])
       queryClient.setQueryData<TrackerCard[]>(hiddenQueryKey, [promoCard])
 
-      vi.mocked(restorePromo).mockResolvedValue({
-        data: {},
-        error: null,
-      })
+      // Mock server response (delayed to capture optimistic state)
+      vi.mocked(restorePromo).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: {}, error: null }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useRestorePromo(setId, preferences), {
         wrapper,
       })
 
-      result.current.mutate('promo-1')
+      await act(async () => {
+        result.current.mutate('promo-1')
+        await Promise.resolve()
+      })
 
       // Hidden list should be empty
       const hiddenData = queryClient.getQueryData<TrackerCard[]>(hiddenQueryKey)
@@ -502,16 +577,22 @@ describe('Collection Hooks - Optimistic Updates', () => {
       queryClient.setQueryData<TrackerCard[]>(queryKey, initialMainCards)
       queryClient.setQueryData<TrackerCard[]>(hiddenQueryKey, initialHiddenCards)
 
-      vi.mocked(restorePromo).mockResolvedValue({
-        data: null,
-        error: 'Restore failed',
-      })
+      // Mock server error (delayed to capture optimistic state)
+      vi.mocked(restorePromo).mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ data: null, error: 'Restore failed' }), 50)
+          )
+      )
 
       const { result } = renderHook(() => useRestorePromo(setId, preferences), {
         wrapper,
       })
 
-      result.current.mutate('promo-1')
+      await act(async () => {
+        result.current.mutate('promo-1')
+        await Promise.resolve()
+      })
 
       // Optimistic update applies
       expect(queryClient.getQueryData<TrackerCard[]>(hiddenQueryKey)).toHaveLength(0)
@@ -546,7 +627,10 @@ describe('Collection Hooks - Optimistic Updates', () => {
         wrapper,
       })
 
-      result.current.mutate('promo-1')
+      await act(async () => {
+        result.current.mutate('promo-1')
+        await Promise.resolve()
+      })
 
       // Hidden list should still have promo-2
       const hiddenData = queryClient.getQueryData<TrackerCard[]>(hiddenQueryKey)
