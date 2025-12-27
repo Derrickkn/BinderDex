@@ -92,6 +92,158 @@ Both modes share a single canvas editor, allowing users to seamlessly blend auto
 | Payments | Stripe | Subscriptions + webhooks |
 | Drag & Drop | @dnd-kit/core | Modern, accessible drag-drop library |
 | Image Processing | Cropper.js + node-vibrant | Client-side cropping, color extraction |
+| Testing | Vitest + @testing-library/react | Unit, integration, and hook tests |
+
+## Testing Guidelines
+
+**CRITICAL: Run tests before committing. Tests are your safety net for changes.**
+
+### Test Coverage
+
+| Category | Tests | Coverage | Location |
+|----------|-------|----------|----------|
+| Tracker Utilities | 68 tests | 96%+ statements | `src/lib/tracker/__tests__/` |
+| Collection Hooks | 15 tests | 78% statements | `src/hooks/tracker/__tests__/useCollection.test.tsx` |
+| Preferences Hook | 7 tests | 97% statements | `src/hooks/tracker/__tests__/useTrackerPreferences.test.tsx` |
+
+**Total:** 90 tests covering core tracker functionality
+
+### When to Run Tests
+
+**Required (Manual):**
+```bash
+# Before every commit
+npm test
+
+# Check coverage when making significant changes
+npm run test:coverage
+```
+
+**Automatic (CI/CD):**
+- Tests run automatically on every push via GitHub Actions (`.github/workflows/ci.yml`)
+- Pull requests show ✅ if tests pass, ❌ if they fail
+- **Do not merge PRs with failing tests**
+
+**Optional (Development):**
+```bash
+# Watch mode - tests re-run on file save
+npm test -- --watch
+
+# Run specific test file
+npm test -- src/lib/tracker/__tests__/utils.test.ts
+
+# Run tests matching pattern
+npm test -- -t "optimistic update"
+```
+
+### Development Workflow with Tests
+
+**When Adding New Features:**
+1. Write the feature code
+2. Write tests for the new functionality
+3. Run `npm test` to verify tests pass
+4. Commit both code and tests together
+
+**When Modifying Existing Code:**
+1. Make your changes
+2. Run `npm test` immediately
+3. If tests fail → fix code or update tests
+4. Commit only when all tests pass ✅
+
+**When Refactoring:**
+1. Run `npm test` BEFORE refactoring (ensure baseline passes)
+2. Refactor the code
+3. Run `npm test` AFTER refactoring
+4. If tests still pass → refactoring is safe ✅
+5. If tests fail → you broke something, fix it
+
+**When Debugging:**
+1. Write a test that reproduces the bug
+2. Run test → it should fail (confirming the bug)
+3. Fix the bug
+4. Run test → it should pass ✅
+5. Commit fix + test together
+
+### Test Utilities
+
+**Mock Data Factories:**
+```typescript
+import { mockTrackerCards, createMockCard } from '@/test/mockData/trackerMocks'
+
+// Create 10 mock cards
+const cards = mockTrackerCards(10)
+
+// Create custom mock card
+const card = createMockCard({ owned: true, quantity: 3 })
+```
+
+**Test Helpers:**
+```typescript
+import { renderWithProviders, createQueryClientWrapper } from '@/test/utils'
+
+// For component tests (future)
+const { getByText } = renderWithProviders(<MyComponent />)
+
+// For hook tests
+const { queryClient, wrapper } = createQueryClientWrapper()
+const { result } = renderHook(() => useMyHook(), { wrapper })
+```
+
+**Testing Async Mutations:**
+```typescript
+// Wrap mutations in act() for optimistic updates
+await act(async () => {
+  result.current.mutate('variant-1')
+  await Promise.resolve()
+})
+
+// Assert on optimistic state
+expect(queryClient.getQueryData(queryKey)).toBe(expectedValue)
+
+// Wait for async completion
+await waitFor(() => expect(result.current.isSuccess).toBe(true))
+```
+
+### Coverage Thresholds
+
+Current thresholds in `vitest.config.ts`:
+- Statements: 70%
+- Functions: 70%
+- Branches: 65%
+- Lines: 70%
+
+**If coverage drops below thresholds:**
+1. `npm run test:coverage` will fail
+2. Identify untested code in coverage report
+3. Add tests to cover new code paths
+4. Commit tests with feature code
+
+### Important Testing Rules
+
+1. **NEVER skip tests** - If tests fail, fix them. Don't disable or remove them.
+2. **Test business logic, not implementation details** - Test what the function does, not how it does it
+3. **Keep tests simple and readable** - Future you will thank current you
+4. **Mock external dependencies** - Database calls, API requests, etc.
+5. **One assertion per test (when possible)** - Makes failures easier to debug
+6. **Use descriptive test names** - `it('marks card as owned when quantity > 0')` not `it('test1')`
+
+### What Gets Tested
+
+**✅ Always Test:**
+- Pure utility functions (sorting, filtering, calculations)
+- React Query hooks (mutations, optimistic updates, rollbacks)
+- Business logic (pricing, permissions, calculations)
+- Edge cases (empty arrays, null values, boundary conditions)
+
+**⏸️ Test Later (Lower Priority):**
+- UI components (visual appearance, user interactions)
+- Server actions (already covered by hook tests)
+- Database queries (covered by integration tests when needed)
+
+**❌ Don't Test:**
+- Third-party libraries (trust they work)
+- Simple type definitions
+- Configuration files
 
 ## Supabase Project
 
