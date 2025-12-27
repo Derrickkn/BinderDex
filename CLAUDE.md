@@ -13,6 +13,60 @@ Both modes share a single canvas editor, allowing users to seamlessly blend auto
 
 **Status**: In Development (Solo developer + Claude Code)
 
+## Agent Usage Guidelines
+
+**CRITICAL: Use specialized agents extensively to offload complex work.**
+
+### When to Use Agents
+
+1. **Explore Agent** (`subagent_type: "Explore"`) - Use for ALL codebase exploration tasks:
+   - Understanding project structure and architecture
+   - Finding how features are implemented
+   - Discovering patterns and conventions
+   - Searching for specific functionality across multiple files
+   - Answering "how does X work?" questions
+   - **Always specify thoroughness level**: "quick", "medium", or "very thorough"
+
+   ```typescript
+   // Example: When user asks "How does the filter system work?"
+   Task(subagent_type: "Explore", prompt: "Perform a very thorough exploration
+   of the filter system implementation...")
+   ```
+
+2. **Bug Fixer Agent** (`subagent_type: "binderdex-bug-fixer"`) - Use for ALL bugs and errors:
+   - Runtime errors and exceptions
+   - Failed API calls or database queries
+   - Supabase/RLS issues
+   - UI rendering bugs
+   - Filter system issues
+   - Drag-and-drop problems
+   - Any deviation from expected behavior
+   - Performance issues
+
+   ```typescript
+   // Example: When user reports "Cards aren't loading"
+   Task(subagent_type: "binderdex-bug-fixer", prompt: "Diagnose and fix
+   the card loading issue...")
+   ```
+
+3. **Plan Agent** (`subagent_type: "Plan"`) - Use for planning new features:
+   - Designing implementation strategies
+   - Breaking down complex features
+   - Identifying critical files and dependencies
+
+4. **General Purpose Agent** - Use for multi-step tasks requiring multiple tools:
+   - Data import workflows
+   - Complex refactoring across multiple files
+   - Tasks requiring both exploration and implementation
+
+### Agent Usage Rules
+
+- **ALWAYS prefer agents over direct tool use** for exploration and debugging
+- **Run agents in parallel** when tasks are independent (single message, multiple Task calls)
+- **Provide detailed context** in agent prompts - they can't see conversation history
+- **Specify thoroughness** for Explore agents: quick/medium/very thorough
+- **Trust agent outputs** - they have specialized knowledge and context
+
 ## Core Value Pillars
 
 | Pillar | Description |
@@ -22,19 +76,6 @@ Both modes share a single canvas editor, allowing users to seamlessly blend auto
 | **Build** | Unified builder with manual creation + algorithmic generation |
 | **Share** | Community gallery, templates, and social export options |
 
-## Bug Fixing
-
-When the user reports an error, bug, or unexpected behavior in the application, **always use the `binderdex-bug-fixer` agent** to diagnose and fix the issue. This includes:
-- Runtime errors and exceptions
-- Failed API calls or database queries
-- Supabase/RLS issues
-- Stripe integration problems
-- UI rendering bugs
-- Filter system issues
-- Drag-and-drop problems
-- Any deviation from expected behavior
-
-The bug-fixer agent has full context of the BinderDex architecture and can trace through the codebase to identify root causes.
 
 ## Tech Stack
 
@@ -72,7 +113,7 @@ Use this project ID for all Supabase MCP operations: migrations, SQL execution, 
 | Package Manager | npm | Standard compatibility |
 | Auth Strategy | Email only | OAuth (Google/Discord) added later |
 | Card Images | Pokemon TCG API hosted | External URLs, can migrate to Supabase Storage later |
-| Main Branch | main | Production branch |
+| Main Branch | master | Production branch |
 
 ## Core Features
 
@@ -85,16 +126,26 @@ Use this project ID for all Supabase MCP operations: migrations, SQL execution, 
 - Responsive grid with infinite scroll and virtualization
 - Card detail modal with zoom, metadata, and actions
 
-### 2. Master Set Tracker
+### 2. Master Set Tracker (FULLY IMPLEMENTED)
 
 **Key Clarification**: The Master Set Tracker serves as a visual guide showing what the user's physical binder should look like when completed. Users can look at the virtual binder and see cards they are missing in each specific slot.
 
+**Core Features:**
 - **Visual binder representation** showing what user's physical binder should look like
-- Variants (Normal, Reverse Holo, First Edition, etc.) are ONLY shown here
+- Variants (Normal, Reverse Holo, First Edition, Pokéball, Masterball) are ONLY shown here
 - Slot configurations: 9 (3×3), 12 (3×4), 16 (4×4)
-- Dynamic preferences: toggle promos, toggle reverse holos
+- Dynamic preferences: toggle promos, toggle reverse holos, toggle Pokéball, toggle Masterball
 - Visual states: Owned (full image) vs Missing (greyed placeholder)
 - Progress tracking: Completion percentage, missing cards list
+
+**Advanced Features:**
+- **Hidden Promos Management**: Users can hide/restore promotional cards they don't want to track
+- **Bulk Actions (Quick Fill)**: Mark all cards of a specific rarity/variant type at once
+- **Optimistic Updates**: Instant UI feedback with background server sync
+- **Client-Side Filtering**: Preference changes are instant (no refetch required)
+- **Pagination-Based Navigation**: 2-page spreads on desktop, 1-page on mobile
+- **Touch Gestures**: Swipe navigation, pinch zoom, long-press for details
+- **Interactive Tutorial**: Coach marks system for first-time users
 
 ### 3. Unified Binder Builder (Flagship Feature)
 The Unified Binder Builder combines ChromaDex's algorithmic page generation with Michi Method's creative freedom into a single, cohesive experience.
@@ -134,13 +185,18 @@ The Unified Binder Builder combines ChromaDex's algorithmic page generation with
 
 ### Core Tables
 ```
-sets: id, name, series, era, printed_total, total, release_date, has_reverse_holos, logo_url, symbol_url
+sets: id, name, series, era, printed_total, total, release_date, has_reverse_holos,
+      has_pokeball_variants, has_masterball_variants, logo_url, symbol_url
 
 cards: id, set_id, name, number, rarity, supertype, subtypes[], types[], hp, artist,
        national_dex_numbers[], image_small, image_large, is_promo, is_premium,
        is_legendary, is_mythical, generation
 
-card_variants: id, card_id, variant_type (NORMAL, REVERSE_HOLO, FIRST_EDITION, SHADOWLESS, UNLIMITED, POKEBALL, MASTERBALL), image_url
+card_variants: id, card_id, variant_type (NORMAL, REVERSE_HOLO, FIRST_EDITION,
+               SHADOWLESS, UNLIMITED, POKEBALL, MASTERBALL), image_url
+
+promo_cards: id, set_id, promo_number, card_name, card_type, product_source,
+             is_pokemon_center_exclusive, image_small, image_large
 ```
 
 ### ChromaDex Tables
@@ -154,6 +210,8 @@ user_profiles: id (= auth.users.id), email, display_name, avatar_url, tier,
                chromadex_uses_this_month, chromadex_reset_date
 
 user_collections: id, user_id, variant_id, quantity, condition, notes, acquired_date
+
+user_promo_preferences: id, user_id, set_id, promo_id, is_tracked
 
 subscriptions: id, user_id, stripe_customer_id, stripe_subscription_id, status, current_period_end
 ```
@@ -179,7 +237,8 @@ master_set_preferences: id, user_id, set_id, slot_config, include_promos, includ
 binder_templates: id, name, description, category, slot_config,
                   layout_data (JSONB), is_premium, preview_image_url, created_by
 
-custom_images: id, user_id, storage_path, original_filename, file_size, uploaded_at
+custom_images: id, user_id, storage_path, original_filename, file_size,
+               mime_type, width, height, uploaded_at
 ```
 
 ## Key Architectural Decisions
@@ -199,7 +258,12 @@ custom_images: id, user_id, storage_path, original_filename, file_size, uploaded
 - Downloaded and processed locally (not API) to avoid rate limits
 - Card IDs format: `{setId}-{number}` (e.g., 'me1-1', 'me2-25')
 
-**Initial Target Sets**: Mega Evolution Base Set (me1) & Phantasmal Flames (me2)
+**Current Database Status**:
+- **20 sets** in production including Mega Evolution (me1, me2), Scarlet & Violet (sv8-sv10, sv8pt5),
+  and special releases (zsv10pt5 Black Bolt, rsv10pt5 White Flare)
+- **4,108+ cards** across all sets
+- **6,514+ variants** (Normal, Reverse Holo, Pokéball, Masterball, etc.)
+- **195+ promo cards** with metadata
 
 **Premium Card Identification**:
 - Mega Evolution & S/V: `isPremium = true` for 'Illustration Rare', 'Special Illustration Rare'
@@ -258,7 +322,7 @@ custom_images: id, user_id, storage_path, original_filename, file_size, uploaded
 ## Git Conventions
 
 **Branch Strategy**:
-- `main` - production (protected, always deployable)
+- `master` - production (protected, always deployable)
 - `develop` - integration branch for ongoing work
 - `feature/*` - feature development (e.g., `feature/card-browser`, `feature/unified-builder`)
 - `hotfix/*` - emergency production fixes
@@ -280,12 +344,12 @@ custom_images: id, user_id, storage_path, original_filename, file_size, uploaded
    - Delete the feature branch after merge
 
 4. **Releasing to production**:
-   - When `develop` is stable, merge into `main`: `git checkout main && git merge develop`
+   - When `develop` is stable, merge into `master`: `git checkout master && git merge develop`
    - Tag releases: `git tag -a v0.1.0 -m "Phase 0 complete"`
 
 5. **Hotfixes**:
-   - Merge hotfix into both `main` AND `develop`
-   - Tag the fix on main
+   - Merge hotfix into both `master` AND `develop`
+   - Tag the fix on master
 
 **Commit Format** (Conventional Commits):
 ```
@@ -331,14 +395,14 @@ chore: description         # Maintenance
 
 ## Important Rules
 
-1. **Never show variants in Browse** - only unique cards
-2. **Filter system must be shared** - don't duplicate filter logic
-3. **ChromaDex data is pre-computed** - colors extracted during data import, not at runtime
-4. **RLS on all user tables** - enforce at database level
-5. **Optimistic updates** - for responsive drag-and-drop UX
-6. **URL sync for filters** - filters should be shareable via URL params
-7. **Magic UI first** - always use Magic UI components before falling back to plain Tailwind CSS
-8. **Use binderdex-bug-fixer agent** - when user reports errors or bugs, use this agent to diagnose and fix
+1. **Use agents extensively** - Offload exploration to Explore agents, bugs to binderdex-bug-fixer agent
+2. **Never show variants in Browse** - only unique cards
+3. **Filter system must be shared** - don't duplicate filter logic
+4. **ChromaDex data is pre-computed** - colors extracted during data import, not at runtime
+5. **RLS on all user tables** - enforce at database level
+6. **Optimistic updates** - for responsive drag-and-drop UX
+7. **URL sync for filters** - filters should be shareable via URL params
+8. **Magic UI first** - always use Magic UI components before falling back to plain Tailwind CSS
 9. **Unified Builder architecture** - ChromaDex and Michi share the same canvas editor
 
 ## Environment Variables
