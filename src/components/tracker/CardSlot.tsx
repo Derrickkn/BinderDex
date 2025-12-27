@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import { TrackerCard } from "@/lib/types/tracker";
 import { formatVariantType } from "@/lib/tracker/utils";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export function CardSlot({
   onOpenDetail,
   isHighlighted = false,
 }: CardSlotProps) {
+  const [imageLoaded, setImageLoaded] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPressRef = useRef(false);
   const lastClickRef = useRef(0);
@@ -70,8 +71,17 @@ export function CardSlot({
     onOpenDetail();
   }, [clearTimer, onOpenDetail]);
 
+  const handleImageLoad = useCallback(() => {
+    setImageLoaded(true);
+  }, []);
+
   const imageUrl = card.variant_image_url || card.image_small || card.image_large;
   const isOwned = card.owned && card.quantity > 0;
+
+  // Reset image loaded state when card changes
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [imageUrl, card.variant_id]);
 
   return (
     <div
@@ -91,6 +101,13 @@ export function CardSlot({
       )}
       title={`${card.name} - ${formatVariantType(card.variant_type)}`}
     >
+      {/* Loading skeleton - shows while image is loading */}
+      {imageUrl && !imageLoaded && (
+        <div className="absolute inset-0 bg-zinc-800 animate-pulse">
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-700 to-zinc-800" />
+        </div>
+      )}
+
       {/* Card image */}
       {imageUrl ? (
         <Image
@@ -98,9 +115,12 @@ export function CardSlot({
           alt={card.name}
           fill
           sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, 20vw"
+          onLoad={handleImageLoad}
           className={cn(
-            "object-cover transition-all duration-200",
-            !isOwned && "grayscale opacity-40"
+            "object-cover transition-all duration-500",
+            !isOwned && "grayscale opacity-40",
+            // Smooth fade-in when image loads
+            imageLoaded ? "opacity-100" : "opacity-0"
           )}
         />
       ) : (
