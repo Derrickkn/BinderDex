@@ -452,44 +452,45 @@ export function TrackerToolbar({
             if (confirmAction === "mark-all") {
               if (hasSelections) {
                 // Mark only selected rarities - OPTIMIZED: Process all in parallel
-                setActiveAction("mark-all");
-                try {
-                  // Execute all rarity marking operations in parallel using Promise.all
-                  const allOperations = [
-                    ...selectedRarities.map(rarity => onMarkByRarity(rarity)),
-                    ...selectedReverseHolos.map(rarity => onMarkReverseHolosByRarity(rarity))
-                  ];
+                // UI updates instantly via optimistic updates, modal closes immediately
 
-                  // Wait for all operations to complete in parallel
-                  const results = await Promise.all(allOperations);
+                // Execute all rarity marking operations in parallel using Promise.all
+                const allOperations = [
+                  ...selectedRarities.map(rarity => onMarkByRarity(rarity)),
+                  ...selectedReverseHolos.map(rarity => onMarkReverseHolosByRarity(rarity))
+                ];
 
-                  // Sum up all the marked cards
-                  const totalMarked = results.reduce((sum, result) => sum + result.count, 0);
+                // Close modal immediately - optimistic updates already made UI correct
+                setConfirmAction(null);
 
-                  setNotification({
-                    type: "success",
-                    message: `Marked ${totalMarked} card${totalMarked !== 1 ? 's' : ''}`,
+                // Clear selections immediately
+                setSelectedRarities([]);
+                setSelectedReverseHolos([]);
+
+                // Execute operations in background and show notification when done
+                Promise.all(allOperations)
+                  .then((results) => {
+                    const totalMarked = results.reduce((sum, result) => sum + result.count, 0);
+                    setNotification({
+                      type: "success",
+                      message: `Marked ${totalMarked} card${totalMarked !== 1 ? 's' : ''}`,
+                    });
+                  })
+                  .catch(() => {
+                    setNotification({
+                      type: "error",
+                      message: "Failed to mark cards",
+                    });
                   });
-
-                  // Clear selections
-                  setSelectedRarities([]);
-                  setSelectedReverseHolos([]);
-                } catch {
-                  setNotification({
-                    type: "error",
-                    message: "Failed to mark cards",
-                  });
-                } finally {
-                  setActiveAction(null);
-                }
               } else {
                 // Mark all (existing behavior)
                 await handleAction("mark-all", onMarkAll);
+                setConfirmAction(null);
               }
             } else if (confirmAction === "clear-all") {
               await handleClearAction("clear-all", onClearAll);
+              setConfirmAction(null);
             }
-            setConfirmAction(null);
           }}
           onCancel={() => setConfirmAction(null)}
           isLoading={activeAction === confirmAction}
