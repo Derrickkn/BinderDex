@@ -34,6 +34,30 @@ export function renderWithProviders(
   return { ...render(ui, { wrapper: Wrapper, ...options }), queryClient }
 }
 
+/**
+ * Create a QueryClient and wrapper for hook tests
+ * Use this when you need to access queryClient before calling renderHook
+ */
+export function createQueryClientWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  })
+
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+
+  return { queryClient, wrapper }
+}
+
 // Re-export everything from @testing-library/react
 export * from '@testing-library/react'
 
