@@ -1,9 +1,14 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import {
   toggleCardOwned,
   updateCollectionEntry,
+  untrackPromo,
+  getHiddenPromoCount,
+  getHiddenPromos,
+  restorePromo,
+  resetPromoPreferences,
 } from "@/lib/tracker/actions";
 import { CollectionEntryUpdate, TrackerCard, TrackerPreferences } from "@/lib/types/tracker";
 import { variantKeys } from "./useSetVariants";
@@ -135,6 +140,209 @@ export function useUpdateCollectionEntry(setId: string, preferences: TrackerPref
         queryKey: setKeys.tracked(),
         refetchType: 'none'
       });
+      queryClient.invalidateQueries({
+        queryKey: setKeys.progress(),
+        refetchType: 'none'
+      });
+    },
+  });
+}
+
+/**
+ * Optimistic-first promo untrack hook.
+ * UI updates instantly by removing the promo card from the list and adding it to hidden promos.
+ */
+export function useUntrackPromo(setId: string, preferences: TrackerPreferences) {
+  const queryClient = useQueryClient();
+  // Use the exact same query key as useSetVariants
+  const queryKey = variantKeys.withPreferences(setId, preferences);
+  const hiddenPromosQueryKey = ["hidden-promos-list", setId];
+
+  return useMutation({
+    mutationFn: async (promoId: string) => {
+      const result = await untrackPromo(promoId, setId);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return { promoId };
+    },
+    onMutate: async (promoId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey });
+      await queryClient.cancelQueries({ queryKey: hiddenPromosQueryKey });
+
+      // Snapshot previous values for rollback
+      const previousCards = queryClient.getQueryData<TrackerCard[]>(queryKey);
+      const previousHiddenPromos = queryClient.getQueryData<TrackerCard[]>(hiddenPromosQueryKey);
+
+      // Find the card being hidden
+      const cardToHide = previousCards?.find((card) => card.promo_id === promoId);
+
+      // Optimistically remove the promo card from the main list
+      queryClient.setQueryData<TrackerCard[]>(queryKey, (old) => {
+        if (!old) return old;
+        return old.filter((card) => card.promo_id !== promoId);
+      });
+
+      // Optimistically add to hidden promos list
+      if (cardToHide) {
+        queryClient.setQueryData<TrackerCard[]>(hiddenPromosQueryKey, (old) => {
+          if (!old) return [cardToHide];
+          return [...old, cardToHide];
+        });
+      }
+
+      return { previousCards, previousHiddenPromos, promoId };
+    },
+    onError: (_err, _promoId, context) => {
+      // Rollback to previous state on error
+      if (context?.previousCards) {
+        queryClient.setQueryData(queryKey, context.previousCards);
+      }
+      if (context?.previousHiddenPromos) {
+        queryClient.setQueryData(hiddenPromosQueryKey, context.previousHiddenPromos);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate hidden promo count to show new count
+      queryClient.invalidateQueries({
+        queryKey: ["hidden-promos", setId]
+      });
+      // Background sync for tracked sets and progress
+      queryClient.invalidateQueries({
+        queryKey: setKeys.tracked(),
+        refetchType: 'none'
+      });
+      queryClient.invalidateQueries({
+        queryKey: setKeys.progress(),
+        refetchType: 'none'
+      });
+    },
+  });
+}
+
+/**
+ * Hook to get hidden promo count for a set
+ */
+export function useHiddenPromoCount(setId: string) {
+  return useQuery({
+    queryKey: ["hidden-promos", setId],
+    queryFn: async () => {
+      const result = await getHiddenPromoCount(setId);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result.data || 0;
+    },
+  });
+}
+
+/**
+ * Hook to reset hidden promos for a set
+ */
+export function useResetHiddenPromos(setId: string, preferences: TrackerPreferences) {
+  const queryClient = useQueryClient();
+  const queryKey = variantKeys.withPreferences(setId, preferences);
+
+  return useMutation({
+    mutationFn: async () => {
+      const result = await resetPromoPreferences(setId);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate hidden promo count
+      queryClient.invalidateQueries({ queryKey: ["hidden-promos", setId] });
+      // Invalidate hidden promos list
+      queryClient.invalidateQueries({ queryKey: ["hidden-promos-list", setId] });
+      // Refetch variants to show restored promos
+      queryClient.invalidateQueries({ queryKey });
+      // Update progress
+      queryClient.invalidateQueries({
+        queryKey: setKeys.progress(),
+        refetchType: 'none'
+      });
+    },
+  });
+}
+
+/**
+ * Hook to fetch hidden promo cards for a set
+ */
+export function useHiddenPromos(setId: string) {
+  return useQuery({
+    queryKey: ["hidden-promos-list", setId],
+    queryFn: async () => {
+      const result = await getHiddenPromos(setId);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return result.data || [];
+    },
+  });
+}
+
+/**
+ * Hook to restore a single hidden promo
+ */
+export function useRestorePromo(setId: string, preferences: TrackerPreferences) {
+  const queryClient = useQueryClient();
+  const queryKey = variantKeys.withPreferences(setId, preferences);
+  const hiddenPromosQueryKey = ["hidden-promos-list", setId];
+
+  return useMutation({
+    mutationFn: async (promoId: string) => {
+      const result = await restorePromo(promoId, setId);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return { promoId };
+    },
+    onMutate: async (promoId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: hiddenPromosQueryKey });
+      await queryClient.cancelQueries({ queryKey });
+
+      // Snapshot previous values for rollback
+      const previousHiddenPromos = queryClient.getQueryData<TrackerCard[]>(hiddenPromosQueryKey);
+      const previousCards = queryClient.getQueryData<TrackerCard[]>(queryKey);
+
+      // Find the card being restored
+      const cardToRestore = previousHiddenPromos?.find((card) => card.promo_id === promoId);
+
+      // Optimistically remove the promo from hidden list
+      queryClient.setQueryData<TrackerCard[]>(hiddenPromosQueryKey, (old) => {
+        if (!old) return old;
+        return old.filter((card) => card.promo_id !== promoId);
+      });
+
+      // Optimistically add back to main cards list
+      if (cardToRestore) {
+        queryClient.setQueryData<TrackerCard[]>(queryKey, (old) => {
+          if (!old) return [cardToRestore];
+          // Add it back to the end (promos are typically at the end)
+          return [...old, cardToRestore];
+        });
+      }
+
+      return { previousHiddenPromos, previousCards, promoId };
+    },
+    onError: (_err, _promoId, context) => {
+      // Rollback to previous state on error
+      if (context?.previousHiddenPromos) {
+        queryClient.setQueryData(hiddenPromosQueryKey, context.previousHiddenPromos);
+      }
+      if (context?.previousCards) {
+        queryClient.setQueryData(queryKey, context.previousCards);
+      }
+    },
+    onSuccess: () => {
+      // Invalidate hidden promo count
+      queryClient.invalidateQueries({
+        queryKey: ["hidden-promos", setId]
+      });
+      // Update progress
       queryClient.invalidateQueries({
         queryKey: setKeys.progress(),
         refetchType: 'none'

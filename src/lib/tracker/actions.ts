@@ -146,6 +146,8 @@ export async function getSetVariantsWithCollection(
   } = await supabase.auth.getUser();
 
   // Build the query with nested LEFT JOIN to user_collections
+  // NOTE: promo_cards is NOT joined here because there's no FK relationship between cards and promo_cards.
+  // Promo metadata is fetched separately below when includePromos is true.
   let query = supabase
     .from("cards")
     .select(
@@ -183,6 +185,38 @@ export async function getSetVariantsWithCollection(
     return { data: null, error: error.message };
   }
 
+  // Fetch promo metadata and untracked promo preferences separately (no FK between cards and promo_cards)
+  const promoMetadataMap: Map<string, { id: string; promo_number: string; product_source: string; is_pokemon_center_exclusive: boolean | null }> = new Map();
+  let untrackedPromoIds: Set<string> = new Set();
+
+  if (preferences.includePromos) {
+    // Fetch promo metadata for this set (keyed by promo_number which matches cards.number)
+    const { data: promoCards } = await supabase
+      .from("promo_cards")
+      .select("id, promo_number, product_source, is_pokemon_center_exclusive")
+      .eq("set_id", setId);
+
+    if (promoCards) {
+      for (const pc of promoCards) {
+        promoMetadataMap.set(pc.promo_number, pc);
+      }
+    }
+
+    // Get untracked promos for this user (if authenticated)
+    if (user) {
+      const { data: untrackedPrefs } = await supabase
+        .from("user_promo_preferences")
+        .select("promo_id")
+        .eq("user_id", user.id)
+        .eq("set_id", setId)
+        .eq("is_tracked", false);
+
+      if (untrackedPrefs) {
+        untrackedPromoIds = new Set(untrackedPrefs.map(p => p.promo_id));
+      }
+    }
+  }
+
   // Flatten the variants into TrackerCards with collection data already joined
   const trackerCards: TrackerCard[] = [];
 
@@ -199,6 +233,14 @@ export async function getSetVariantsWithCollection(
         acquired_date: string | null;
       }> | null;
     }>;
+
+    // Get promo metadata if this is a promo card (lookup by card.number)
+    const promoInfo = card.is_promo ? promoMetadataMap.get(card.number) || null : null;
+
+    // Skip this promo if user has untracked it
+    if (card.is_promo && promoInfo && untrackedPromoIds.has(promoInfo.id)) {
+      continue;
+    }
 
     for (const variant of variants) {
       // Get collection data if it exists
@@ -222,13 +264,24 @@ export async function getSetVariantsWithCollection(
           notes: collection?.notes || null,
           acquired_date: collection?.acquired_date || null,
           collection_id: collection?.id || null,
+          // Promo-specific fields (is_promo is inherited from card via spread)
+          promo_id: promoInfo?.id ?? null,
+          promo_number: promoInfo?.promo_number ?? null,
+          promo_product_source: promoInfo?.product_source ?? null,
+          is_promo_untracked: false, // If we got here, it's not untracked
+          is_pokemon_center_exclusive: promoInfo?.is_pokemon_center_exclusive ?? null,
         } as TrackerCard);
       }
     }
   }
 
-  // Sort by number then variant type
+  // Sort: regular cards first (by number), then promos at the end
   trackerCards.sort((a, b) => {
+    // Promos always come after regular cards
+    if (a.is_promo && !b.is_promo) return 1;
+    if (!a.is_promo && b.is_promo) return -1;
+
+    // Within the same type (both regular or both promo), sort by number
     const numA = parseInt(a.number, 10);
     const numB = parseInt(b.number, 10);
 
@@ -482,6 +535,12 @@ export async function updateTrackerPreferences(
   }
   if (preferences.includePromos !== undefined) {
     updateData.include_promos = preferences.includePromos;
+
+    // When user toggles promos ON, reset all promo preferences (re-enable all untracked promos)
+    // This allows users to restore previously untracked promos by toggling off and on
+    if (preferences.includePromos === true) {
+      await resetPromoPreferences(setId);
+    }
   }
   if (preferences.includeReverseHolos !== undefined) {
     updateData.include_reverse_holos = preferences.includeReverseHolos;
@@ -677,7 +736,8 @@ export async function getTrackedSetsProgress(): Promise<{
         variant_type,
         cards!inner(
           set_id,
-          is_promo
+          is_promo,
+          number
         )
       )
     `)
@@ -688,20 +748,31 @@ export async function getTrackedSetsProgress(): Promise<{
     return { data: null, error: collError.message };
   }
 
-  // Get all variants grouped by set for total counts
-  const { data: allVariants, error: variantsError } = await supabase
-    .from("card_variants")
-    .select(`
-      id,
-      variant_type,
-      cards!inner(
-        set_id,
-        is_promo
-      )
-    `);
+  // Fetch promo metadata and untracked preferences for all tracked sets
+  // This is needed to exclude untracked promos from total counts
+  const { data: promoCards } = await supabase
+    .from("promo_cards")
+    .select("id, set_id, promo_number");
 
-  if (variantsError) {
-    return { data: null, error: variantsError.message };
+  const promoNumberToIdMap = new Map<string, { setId: string; promoId: string }>();
+  if (promoCards) {
+    for (const pc of promoCards) {
+      promoNumberToIdMap.set(pc.promo_number, { setId: pc.set_id, promoId: pc.id });
+    }
+  }
+
+  // Fetch untracked promo preferences for this user
+  const { data: untrackedPrefs } = await supabase
+    .from("user_promo_preferences")
+    .select("promo_id, set_id")
+    .eq("user_id", user.id)
+    .eq("is_tracked", false);
+
+  const untrackedPromoIds = new Set<string>();
+  if (untrackedPrefs) {
+    for (const pref of untrackedPrefs) {
+      untrackedPromoIds.add(pref.promo_id);
+    }
   }
 
   // Identify which sets the user is tracking (has at least one owned card)
@@ -710,35 +781,69 @@ export async function getTrackedSetsProgress(): Promise<{
     const cardVariant = entry.card_variants as unknown as {
       card_id: string;
       variant_type: string;
-      cards: { set_id: string; is_promo: boolean };
+      cards: { set_id: string; is_promo: boolean; number: string };
     };
     if (cardVariant?.cards?.set_id) {
       trackedSetIds.add(cardVariant.cards.set_id);
     }
   }
 
-  // Calculate totals per set based on preferences
+  // Get all variants ONLY for tracked sets (avoids Supabase's 1000 row default limit issue)
+  // We query per-set to ensure we get all variants for each tracked set
   const setTotals = new Map<string, number>();
-  for (const variant of allVariants) {
-    const v = variant as unknown as {
-      id: string;
-      variant_type: string;
-      cards: { set_id: string; is_promo: boolean };
-    };
-    const setId = v.cards?.set_id;
-    if (!setId || !trackedSetIds.has(setId)) continue;
 
+  for (const setId of Array.from(trackedSetIds)) {
     const prefs = prefsMap.get(setId) || { includeReverseHolos: false, includePromos: false };
 
-    // Skip promos if not included
-    if (v.cards.is_promo && !prefs.includePromos) continue;
+    // Query variants for this specific set with a higher limit to ensure we get all cards
+    // Most sets have < 500 variants, so 1000 limit per set should be sufficient
+    const { data: setVariants, error: setVarError } = await supabase
+      .from("card_variants")
+      .select(`
+        id,
+        variant_type,
+        cards!inner(
+          set_id,
+          is_promo,
+          number
+        )
+      `)
+      .eq("cards.set_id", setId)
+      .limit(2000); // Increase limit to handle large sets
 
-    // Only count NORMAL or REVERSE_HOLO based on preferences
-    if (v.variant_type === "NORMAL") {
-      setTotals.set(setId, (setTotals.get(setId) || 0) + 1);
-    } else if (v.variant_type === "REVERSE_HOLO" && prefs.includeReverseHolos) {
-      setTotals.set(setId, (setTotals.get(setId) || 0) + 1);
+    if (setVarError) {
+      console.error(`Error fetching variants for set ${setId}:`, setVarError);
+      continue;
     }
+
+    let totalCount = 0;
+    for (const variant of setVariants || []) {
+      const v = variant as unknown as {
+        id: string;
+        variant_type: string;
+        cards: { set_id: string; is_promo: boolean; number: string };
+      };
+
+      // Skip promos if not included
+      if (v.cards.is_promo && !prefs.includePromos) continue;
+
+      // Skip promos that the user has specifically untracked
+      if (v.cards.is_promo && v.cards.number) {
+        const promoInfo = promoNumberToIdMap.get(v.cards.number);
+        if (promoInfo && untrackedPromoIds.has(promoInfo.promoId)) {
+          continue; // Skip untracked promo
+        }
+      }
+
+      // Only count NORMAL or REVERSE_HOLO based on preferences
+      if (v.variant_type === "NORMAL") {
+        totalCount++;
+      } else if (v.variant_type === "REVERSE_HOLO" && prefs.includeReverseHolos) {
+        totalCount++;
+      }
+    }
+
+    setTotals.set(setId, totalCount);
   }
 
   // Count owned cards per set based on preferences
@@ -747,7 +852,7 @@ export async function getTrackedSetsProgress(): Promise<{
     const cardVariant = entry.card_variants as unknown as {
       card_id: string;
       variant_type: string;
-      cards: { set_id: string; is_promo: boolean };
+      cards: { set_id: string; is_promo: boolean; number: string };
     };
     const setId = cardVariant?.cards?.set_id;
     if (!setId) continue;
@@ -756,6 +861,14 @@ export async function getTrackedSetsProgress(): Promise<{
 
     // Skip promos if not included
     if (cardVariant.cards.is_promo && !prefs.includePromos) continue;
+
+    // Skip promos that the user has specifically untracked
+    if (cardVariant.cards.is_promo && cardVariant.cards.number) {
+      const promoInfo = promoNumberToIdMap.get(cardVariant.cards.number);
+      if (promoInfo && untrackedPromoIds.has(promoInfo.promoId)) {
+        continue; // Skip untracked promo
+      }
+    }
 
     // Only count NORMAL or REVERSE_HOLO based on preferences
     if (cardVariant.variant_type === "NORMAL") {
@@ -1058,3 +1171,288 @@ export async function getSetReverseHoloRarities(setId: string): Promise<{
 
   return { data: rarities as string[], error: null };
 }
+
+
+/**
+ * Untrack a specific promo card
+ */
+export async function untrackPromo(
+  promoId: string,
+  setId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Authentication required" };
+  }
+
+  // Upsert: if exists, set is_tracked=false; if not, create new entry
+  const { error } = await supabase.from("user_promo_preferences").upsert(
+    {
+      user_id: user.id,
+      set_id: setId,
+      promo_id: promoId,
+      is_tracked: false,
+    },
+    {
+      onConflict: "user_id,promo_id",
+    }
+  );
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { error: null };
+}
+
+/**
+ * Reset promo tracking preferences for a set (delete all untracked entries)
+ * This is called when user toggles promos off then on again
+ */
+export async function resetPromoPreferences(
+  setId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Authentication required" };
+  }
+
+  // Delete all promo preferences for this set and user
+  const { error } = await supabase
+    .from("user_promo_preferences")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("set_id", setId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { error: null };
+}
+
+/**
+ * Get count of hidden promos for a set
+ */
+export async function getHiddenPromoCount(
+  setId: string
+): Promise<{ data: number | null; error: string | null }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { data: 0, error: null };
+  }
+
+  const { data, error, count } = await supabase
+    .from("user_promo_preferences")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("set_id", setId)
+    .eq("is_tracked", false);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  return { data: count || 0, error: null };
+}
+
+/**
+ * Get hidden promo cards for a set
+ */
+export async function getHiddenPromos(
+  setId: string
+): Promise<{ data: TrackerCard[] | null; error: string | null }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { data: [], error: null };
+  }
+
+  // Get hidden promo IDs
+  const { data: hiddenPrefs, error: prefsError } = await supabase
+    .from("user_promo_preferences")
+    .select("promo_id")
+    .eq("user_id", user.id)
+    .eq("set_id", setId)
+    .eq("is_tracked", false);
+
+  if (prefsError) {
+    return { data: null, error: prefsError.message };
+  }
+
+  if (!hiddenPrefs || hiddenPrefs.length === 0) {
+    return { data: [], error: null };
+  }
+
+  const hiddenPromoIds = hiddenPrefs.map((p) => p.promo_id);
+
+  // Fetch the actual promo cards from promo_cards table
+  const { data: promos, error: promosError } = await supabase
+    .from("promo_cards")
+    .select(`
+      id,
+      card_name,
+      promo_number,
+      card_type,
+      product_source,
+      is_pokemon_center_exclusive,
+      image_small,
+      image_large,
+      created_at,
+      updated_at
+    `)
+    .eq("set_id", setId)
+    .in("id", hiddenPromoIds);
+
+  if (promosError) {
+    return { data: null, error: promosError.message };
+  }
+
+  if (!promos) {
+    return { data: [], error: null };
+  }
+
+  // For promo cards, we need to find the corresponding card_variants entry
+  // Promos are stored in the cards table with is_promo=true, and their variants are in card_variants
+  // The promo_number in promo_cards matches the card.number in cards table
+
+  // Get all promo cards from the cards table to find their variant IDs
+  const promoNumbers = promos.map((p) => p.promo_number);
+  const { data: cardData } = await supabase
+    .from("cards")
+    .select(`
+      id,
+      number,
+      card_variants!inner(id, variant_type)
+    `)
+    .eq("set_id", setId)
+    .eq("is_promo", true)
+    .in("number", promoNumbers);
+
+  // Map promo_number to variant_id (NORMAL variant)
+  const promoNumberToVariantId = new Map<string, string>();
+  if (cardData) {
+    for (const card of cardData) {
+      const variants = card.card_variants as unknown as Array<{ id: string; variant_type: string }>;
+      const normalVariant = variants.find((v) => v.variant_type === "NORMAL");
+      if (normalVariant) {
+        promoNumberToVariantId.set(card.number, normalVariant.id);
+      }
+    }
+  }
+
+  // Get user's collection for these promo variants
+  const variantIds = Array.from(promoNumberToVariantId.values());
+  const { data: collectionEntries } = await supabase
+    .from("user_collections")
+    .select("variant_id, quantity, condition, notes, acquired_date, id")
+    .eq("user_id", user.id)
+    .in("variant_id", variantIds.length > 0 ? variantIds : ["00000000-0000-0000-0000-000000000000"]);
+
+  const collectionMap = new Map(
+    (collectionEntries || []).map((entry) => [entry.variant_id, entry])
+  );
+
+  // Map to TrackerCard format
+  const trackerCards: TrackerCard[] = promos.map((promo) => {
+    // Get the actual variant_id from the cards table mapping
+    const variantId = promoNumberToVariantId.get(promo.promo_number) || `${promo.id}-NORMAL`;
+    const collection = collectionMap.get(variantId);
+    const imageUrl = promo.image_large || promo.image_small;
+
+    return {
+      // Card base fields (from Card type)
+      id: `promo-${promo.id}`,
+      created_at: promo.created_at,
+      updated_at: promo.updated_at,
+      national_dex_numbers: [],
+      name: promo.card_name,
+      number: promo.promo_number,
+      rarity: "Promo",
+      image_small: promo.image_small,
+      image_large: promo.image_large,
+      supertype: "Pokémon",
+      subtypes: [],
+      types: promo.card_type ? [promo.card_type] : [],
+      hp: null,
+      artist: null,
+      set_id: setId,
+      is_promo: true,
+      is_premium: false,
+      is_legendary: false,
+      is_mythical: false,
+      generation: null,
+      // Variant fields
+      variant_id: variantId,
+      variant_type: "NORMAL" as const,
+      variant_image_url: imageUrl,
+      // Collection fields
+      owned: !!collection && collection.quantity > 0,
+      quantity: collection?.quantity || 0,
+      condition: collection?.condition || null,
+      notes: collection?.notes || null,
+      acquired_date: collection?.acquired_date || null,
+      collection_id: collection?.id || null,
+      // Promo-specific fields
+      promo_id: promo.id,
+      promo_number: promo.promo_number,
+      promo_product_source: promo.product_source,
+      is_promo_untracked: true, // These are hidden
+      is_pokemon_center_exclusive: promo.is_pokemon_center_exclusive,
+    };
+  });
+
+  return { data: trackerCards, error: null };
+}
+
+/**
+ * Restore a single hidden promo
+ */
+export async function restorePromo(
+  promoId: string,
+  setId: string
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Authentication required" };
+  }
+
+  // Delete the preference entry to restore the promo
+  const { error } = await supabase
+    .from("user_promo_preferences")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("set_id", setId)
+    .eq("promo_id", promoId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { error: null };
+}
+

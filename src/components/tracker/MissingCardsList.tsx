@@ -39,6 +39,8 @@ interface MissingCardsListProps {
   onCardClick?: (variantId: string) => void;
   slotConfig?: SlotConfig;
   totalCardsInSet?: number;
+  hiddenPromos?: TrackerCard[];
+  onRestorePromo?: (promoId: string) => void;
 }
 
 export function MissingCardsList({
@@ -48,6 +50,8 @@ export function MissingCardsList({
   onCardClick,
   slotConfig = "NINE",
   totalCardsInSet,
+  hiddenPromos = [],
+  onRestorePromo,
 }: MissingCardsListProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [sortField, setSortField] = useState<SortField>("number");
@@ -269,6 +273,27 @@ export function MissingCardsList({
             onCardDetail={handleCardDetail}
           />
         </div>
+
+        {/* Hidden Promos Subsection */}
+        {hiddenPromos.length > 0 && onRestorePromo && (
+          <div className="border-t border-zinc-800/50 pt-4">
+            <div className="px-4 mb-3">
+              <h3 className="text-sm font-semibold text-zinc-400 flex items-center gap-2">
+                <span>Hidden Promos</span>
+                <span className="text-xs text-zinc-600">({hiddenPromos.length})</span>
+              </h3>
+              <p className="text-xs text-zinc-500 mt-1">
+                Click any card to restore it to the binder
+              </p>
+            </div>
+            <div className="px-4 pb-6">
+              <HiddenPromosGrid
+                cards={hiddenPromos}
+                onRestorePromo={onRestorePromo}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -410,13 +435,168 @@ function MissingCardItem({ card, onClick, onRightClick }: MissingCardItemProps) 
       {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="text-xs text-zinc-300 truncate">{card.name}</p>
-        <p className="text-[10px] text-zinc-500 truncate">
-          #{card.number} • {card.rarity}
+        <p className="text-[10px] text-zinc-500">
+          <span className="inline-block">#{card.number}</span> • <span className="inline-block">{card.rarity}</span>
           {card.variant_type !== "NORMAL" && (
             <span> • {formatVariantType(card.variant_type)}</span>
           )}
         </p>
       </div>
+    </button>
+  );
+}
+
+// Hidden promos grid component (styled exactly like missing cards)
+interface HiddenPromosGridProps {
+  cards: TrackerCard[];
+  onRestorePromo: (promoId: string) => void;
+}
+
+function HiddenPromosGrid({ cards, onRestorePromo }: HiddenPromosGridProps) {
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Update dimensions on resize and initial mount
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        // Only update if width is valid (container is visible)
+        if (width > 0) {
+          setDimensions({
+            width,
+            height: 256, // Max height
+          });
+        }
+      }
+    };
+
+    // Initial measurement
+    updateDimensions();
+
+    // Use ResizeObserver for more reliable resize detection
+    const resizeObserver = new ResizeObserver(updateDimensions);
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Don't render the grid until we have valid dimensions
+  if (!dimensions || dimensions.width === 0) {
+    return (
+      <div ref={containerRef} className="w-full min-h-[70px]">
+        {/* Placeholder while measuring */}
+      </div>
+    );
+  }
+
+  // Responsive column count based on width
+  const columnCount = dimensions.width < 640 ? 2 : dimensions.width < 768 ? 3 : 4;
+  const rowCount = Math.ceil(cards.length / columnCount);
+  const columnWidth = Math.floor(dimensions.width / columnCount);
+  const rowHeight = 70; // Fixed height for each row
+
+  // Render cell function for react-window
+  const Cell = ({ columnIndex, rowIndex, style }: { columnIndex: number; rowIndex: number; style: React.CSSProperties }) => {
+    const index = rowIndex * columnCount + columnIndex;
+    const card = cards[index];
+
+    if (!card) return <div style={style} />;
+
+    return (
+      <div style={style} className="p-1">
+        <HiddenPromoItem
+          card={card}
+          onClick={() => card.promo_id && onRestorePromo(card.promo_id)}
+        />
+      </div>
+    );
+  };
+
+  if (cards.length === 0) {
+    return null;
+  }
+
+  return (
+    <div ref={containerRef} className="w-full">
+      <FixedSizeGrid
+        columnCount={columnCount}
+        columnWidth={columnWidth}
+        height={Math.min(dimensions.height, rowCount * rowHeight)}
+        rowCount={rowCount}
+        rowHeight={rowHeight}
+        width={dimensions.width}
+        className="scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-700 hover:scrollbar-thumb-zinc-600"
+      >
+        {Cell}
+      </FixedSizeGrid>
+    </div>
+  );
+}
+
+// Hidden promo item component (styled exactly like MissingCardItem)
+interface HiddenPromoItemProps {
+  card: TrackerCard;
+  onClick: () => void;
+}
+
+function HiddenPromoItem({ card, onClick }: HiddenPromoItemProps) {
+  const imageUrl = card.variant_image_url || card.image_small;
+
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 rounded-lg border border-amber-800/50 bg-amber-900/10 p-2",
+        "hover:border-amber-600/50 hover:bg-amber-800/20 transition-colors text-left",
+        "group w-full h-full"
+      )}
+      title="Click to restore to binder"
+    >
+      {/* Thumbnail */}
+      <div className="relative w-8 h-11 shrink-0 rounded overflow-hidden bg-zinc-800">
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={card.name}
+            fill
+            sizes="32px"
+            className="object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-[8px] text-zinc-600">{card.number}</span>
+          </div>
+        )}
+
+        {/* PC badge on thumbnail */}
+        {card.is_pokemon_center_exclusive && (
+          <div className="absolute bottom-0 left-0 right-0 bg-amber-600/90 text-center">
+            <span className="text-[7px] font-semibold text-white">PC</span>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-zinc-300 truncate">{card.name}</p>
+        <p className="text-[10px] text-zinc-500">
+          <span className="inline-block">#{card.number}</span> • <span className="inline-block">{card.rarity}</span>
+          {card.variant_type !== "NORMAL" && (
+            <span> • {formatVariantType(card.variant_type)}</span>
+          )}
+        </p>
+        {card.promo_product_source && (
+          <p className="text-[9px] text-amber-500/70 truncate">
+            {card.promo_product_source}
+          </p>
+        )}
+      </div>
+
+      {/* Restore icon */}
+      <ChevronUp className="h-4 w-4 text-amber-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
     </button>
   );
 }

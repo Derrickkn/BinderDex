@@ -6,6 +6,8 @@ export type Card = Database["public"]["Tables"]["cards"]["Row"];
 export type CardVariant = Database["public"]["Tables"]["card_variants"]["Row"];
 export type UserCollection = Database["public"]["Tables"]["user_collections"]["Row"];
 export type MasterSetPreference = Database["public"]["Tables"]["master_set_preferences"]["Row"];
+export type PromoCard = Database["public"]["Tables"]["promo_cards"]["Row"];
+export type UserPromoPreference = Database["public"]["Tables"]["user_promo_preferences"]["Row"];
 
 // Enum types
 export type SlotConfig = Database["public"]["Enums"]["slot_config"];
@@ -30,6 +32,12 @@ export interface TrackerCard extends CardWithVariant {
   notes: string | null;
   acquired_date: string | null;
   collection_id: string | null;
+  // Promo-specific fields (is_promo is inherited from Card)
+  promo_id: string | null;
+  promo_number: string | null;
+  promo_product_source: string | null;
+  is_promo_untracked: boolean;
+  is_pokemon_center_exclusive: boolean | null;
 }
 
 export interface TrackerPage {

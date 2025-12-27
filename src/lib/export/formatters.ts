@@ -33,15 +33,28 @@ export function formatMissingCardsForExport(
   cards: TrackerCard[],
   setId: string
 ): ExportCard[] {
-  return cards.map((card) => ({
-    name: card.name,
-    cardNumber: card.number,
-    setId: setId,
-    fullSetNumber: `${setId}-${card.number}`,
-    rarity: formatRarityForExport(card.rarity),
-    variant: formatVariantForExport(card.variant_type),
-    imageUrl: card.variant_image_url || card.image_small || "",
-  }));
+  return cards.map((card) => {
+    let imageUrl = card.variant_image_url || card.image_small || "";
+
+    // Proxy external URLs through our API to avoid CORS issues
+    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
+      imageUrl = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+    }
+    // Convert relative URLs to absolute URLs
+    else if (imageUrl && imageUrl.startsWith("/")) {
+      imageUrl = `${window.location.origin}${imageUrl}`;
+    }
+
+    return {
+      name: card.name,
+      cardNumber: card.number,
+      setId: setId,
+      fullSetNumber: `${setId}-${card.number}`,
+      rarity: formatRarityForExport(card.rarity),
+      variant: formatVariantForExport(card.variant_type),
+      imageUrl,
+    };
+  });
 }
 
 /**

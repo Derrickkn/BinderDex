@@ -13,6 +13,7 @@ interface CardDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: CollectionEntryUpdate) => void;
+  onUntrackPromo?: (promoId: string) => void;
   isSaving?: boolean;
   setTotal?: number;
 }
@@ -22,6 +23,7 @@ export function CardDetailModal({
   isOpen,
   onClose,
   onSave,
+  onUntrackPromo,
   isSaving = false,
   setTotal,
 }: CardDetailModalProps) {
@@ -91,6 +93,20 @@ export function CardDetailModal({
           </div>
         </div>
 
+        {/* Promo source information */}
+        {card.is_promo && card.promo_product_source && (
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+            <div className="flex items-start gap-2">
+              <span className="text-amber-500 text-xs font-semibold uppercase tracking-wide mt-0.5">
+                Promo Card
+              </span>
+            </div>
+            <p className="text-sm text-zinc-300 mt-1">
+              Source: {card.promo_product_source}
+            </p>
+          </div>
+        )}
+
         {/* Owned toggle */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 border border-zinc-700">
           <span className="text-sm font-medium text-zinc-300">Owned</span>
@@ -115,6 +131,26 @@ export function CardDetailModal({
             </div>
           </button>
         </div>
+
+        {/* Untrack promo button (if applicable) */}
+        {card.is_promo && onUntrackPromo && card.promo_id && (
+          <div className="pt-1">
+            <button
+              onClick={() => {
+                if (card.promo_id) {
+                  onUntrackPromo(card.promo_id);
+                  onClose();
+                }
+              }}
+              className="w-full rounded-lg border border-amber-600/50 px-4 py-2.5 text-sm font-medium text-amber-500 hover:bg-amber-500/10 transition-colors"
+            >
+              Hide This Promo
+            </button>
+            <p className="text-xs text-zinc-500 mt-1.5 text-center">
+              This promo will be hidden. Toggle promos off/on to restore.
+            </p>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3 pt-1">

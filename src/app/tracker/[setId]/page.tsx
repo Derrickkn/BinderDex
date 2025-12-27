@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getSetById } from "@/lib/tracker/actions";
-import { useSetVariants, useTrackerPreferences, useToggleOwned, useUpdateCollectionEntry, useBulkActions, type BulkActionResult } from "@/hooks/tracker";
+import { useSetVariants, useTrackerPreferences, useToggleOwned, useUpdateCollectionEntry, useUntrackPromo, useHiddenPromos, useRestorePromo, useBulkActions, type BulkActionResult } from "@/hooks/tracker";
 import { useTrackerStore } from "@/hooks/useTrackerStore";
 import {
   TrackerHeader,
@@ -63,6 +63,11 @@ export default function TrackerSetPage() {
   // Mutations - pass currentPreferences so they use the same query key as useSetVariants
   const toggleOwned = useToggleOwned(setId, currentPreferences);
   const updateCollection = useUpdateCollectionEntry(setId, currentPreferences);
+  const untrackPromoMutation = useUntrackPromo(setId, currentPreferences);
+
+  // Hidden promos management
+  const { data: hiddenPromos } = useHiddenPromos(setId);
+  const restorePromoMutation = useRestorePromo(setId, currentPreferences);
 
   // Bulk actions
   const bulkActions = useBulkActions(setId, currentPreferences);
@@ -162,6 +167,16 @@ export default function TrackerSetPage() {
     if (selectedVariantId) {
       updateCollection.mutate({ variantId: selectedVariantId, data });
     }
+  };
+
+  // Handle promo untrack
+  const handleUntrackPromo = (promoId: string) => {
+    untrackPromoMutation.mutate(promoId);
+  };
+
+  // Handle promo restore
+  const handleRestorePromo = (promoId: string) => {
+    restorePromoMutation.mutate(promoId);
   };
 
   // Bulk action handlers - return result for feedback
@@ -265,7 +280,7 @@ export default function TrackerSetPage() {
           isLoading={isLoadingCards}
         />
 
-        {/* Missing cards list */}
+        {/* Missing cards list with hidden promos subsection */}
         {cards && cards.length > 0 && set && (
           <MissingCardsList
             cards={cards}
@@ -274,6 +289,8 @@ export default function TrackerSetPage() {
             onCardClick={openModal}
             slotConfig={currentPreferences.slotConfig}
             totalCardsInSet={set.printed_total}
+            hiddenPromos={hiddenPromos}
+            onRestorePromo={handleRestorePromo}
           />
         )}
       </main>
@@ -284,6 +301,7 @@ export default function TrackerSetPage() {
         isOpen={isModalOpen}
         onClose={closeModal}
         onSave={handleSaveCardDetail}
+        onUntrackPromo={handleUntrackPromo}
         isSaving={updateCollection.isPending}
         setTotal={set?.printed_total}
       />

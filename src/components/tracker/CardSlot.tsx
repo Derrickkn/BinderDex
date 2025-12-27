@@ -145,6 +145,13 @@ export function CardSlot({
         </div>
       )}
 
+      {/* Pokemon Center exclusive indicator */}
+      {card.is_pokemon_center_exclusive && (
+        <div className="absolute bottom-1 left-1 rounded bg-amber-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+          PC
+        </div>
+      )}
+
       {/* Hover overlay */}
       <div
         className={cn(

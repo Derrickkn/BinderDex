@@ -22,23 +22,47 @@ export interface PDFExportOptions {
 
 /**
  * Load an image and convert to base64
+ * Uses canvas approach to avoid issues with external images
  * Returns null if loading fails
  */
 async function loadImageAsBase64(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
+  return new Promise((resolve) => {
+    const img = new Image();
 
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
+    // Note: No crossOrigin needed because images are proxied through /api/proxy-image
+    // which serves them from our domain with proper CORS headers
+
+    img.onload = () => {
+      try {
+        // Create canvas and draw image
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        // Convert canvas to base64
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        resolve(dataUrl);
+      } catch (error) {
+        console.error('Error converting image to base64:', error);
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      console.error('Error loading image:', url);
+      resolve(null);
+    };
+
+    img.src = url;
+  });
 }
 
 /**
