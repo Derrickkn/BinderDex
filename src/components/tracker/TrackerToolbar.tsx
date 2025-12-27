@@ -483,13 +483,38 @@ export function TrackerToolbar({
                     });
                   });
               } else {
-                // Mark all (existing behavior)
-                await handleAction("mark-all", onMarkAll);
+                // Mark all - close modal immediately, execute in background
                 setConfirmAction(null);
+                onMarkAll().then((result) => {
+                  if (!result.error) {
+                    setNotification({
+                      type: "success",
+                      message: `Marked ${result.count} card${result.count !== 1 ? 's' : ''}`,
+                    });
+                  } else {
+                    setNotification({
+                      type: "error",
+                      message: result.error,
+                    });
+                  }
+                });
               }
             } else if (confirmAction === "clear-all") {
-              await handleClearAction("clear-all", onClearAll);
+              // Clear all - close modal immediately, execute in background
               setConfirmAction(null);
+              onClearAll().then((result) => {
+                if (!result.error) {
+                  setNotification({
+                    type: "success",
+                    message: `Cleared ${result.count} card${result.count !== 1 ? 's' : ''}`,
+                  });
+                } else {
+                  setNotification({
+                    type: "error",
+                    message: result.error,
+                  });
+                }
+              });
             }
           }}
           onCancel={() => setConfirmAction(null)}
