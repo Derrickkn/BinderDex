@@ -9,10 +9,11 @@ import {
   bulkMarkAsOwned,
   bulkUnmarkOwned,
   BulkMarkCriteria,
-} from "@/lib/tracker/actions";
+} from "@/lib/tracker";
 import { TrackerCard, TrackerPreferences } from "@/lib/types/tracker";
 import { variantKeys } from "./useSetVariants";
 import { setKeys } from "./useAvailableSets";
+import { toast } from "sonner";
 
 export type BulkActionResult = { count: number; error: string | null };
 
@@ -161,10 +162,12 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
 
     if (result.error) {
       rollback();
+      toast.error(result.error);
       return { count: 0, error: result.error };
     }
 
     syncProgressInBackground();
+    toast.success(`Marked ${count} ${rarity} card${count !== 1 ? 's' : ''} as owned`);
     return { count, error: null };
   };
 
@@ -181,10 +184,12 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
 
     if (result.error) {
       rollback();
+      toast.error(result.error);
       return { count: 0, error: result.error };
     }
 
     syncProgressInBackground();
+    toast.success(`Marked ${count} Reverse Holo ${rarity} card${count !== 1 ? 's' : ''} as owned`);
     return { count, error: null };
   };
 
@@ -201,10 +206,12 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
 
     if (result.error) {
       rollback();
+      toast.error(result.error);
       return { count: 0, error: result.error };
     }
 
     syncProgressInBackground();
+    toast.success(`Marked ${count} Pokéball ${rarity} card${count !== 1 ? 's' : ''} as owned`);
     return { count, error: null };
   };
 
@@ -221,10 +228,12 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
 
     if (result.error) {
       rollback();
+      toast.error(result.error);
       return { count: 0, error: result.error };
     }
 
     syncProgressInBackground();
+    toast.success(`Marked ${count} Master Ball ${rarity} card${count !== 1 ? 's' : ''} as owned`);
     return { count, error: null };
   };
 
@@ -239,10 +248,12 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
 
     if (result.error) {
       rollback();
+      toast.error(result.error);
       return { count: 0, error: result.error };
     }
 
     syncProgressInBackground();
+    toast.success(`Marked all ${count} card${count !== 1 ? 's' : ''} as owned`);
     return { count, error: null };
   };
 
@@ -257,10 +268,12 @@ export function useBulkActions(setId: string, preferences: TrackerPreferences) {
 
     if (result.error) {
       rollback();
+      toast.error(result.error);
       return { count: 0, error: result.error };
     }
 
     syncProgressInBackground();
+    toast.success(`Cleared ${count} card${count !== 1 ? 's' : ''} from collection`);
     return { count, error: null };
   };
 

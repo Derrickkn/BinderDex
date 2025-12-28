@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getAvailableSets, getTrackedSetIds, getTrackedSetsProgress } from "@/lib/tracker/actions";
+import { getAvailableSets, getTrackedSetIds, getTrackedSetsProgress } from "@/lib/tracker";
 
 export const setKeys = {
   all: ["sets"] as const,

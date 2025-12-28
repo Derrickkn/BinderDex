@@ -6,13 +6,17 @@ import { mockTrackerPreferences } from '@/test/mockData/trackerMocks'
 import type { TrackerPreferences } from '@/lib/types/tracker'
 
 // Mock server actions
-vi.mock('@/lib/tracker/actions', () => ({
+vi.mock('@/lib/tracker/queries/preferences', () => ({
   getTrackerPreferences: vi.fn(),
+}))
+
+vi.mock('@/lib/tracker/mutations/preferences', () => ({
   updateTrackerPreferences: vi.fn(),
 }))
 
 // Import mocked functions
-import { getTrackerPreferences, updateTrackerPreferences } from '@/lib/tracker/actions'
+import { getTrackerPreferences } from '@/lib/tracker/queries/preferences'
+import { updateTrackerPreferences } from '@/lib/tracker/mutations/preferences'
 
 describe('useTrackerPreferences', () => {
   beforeEach(() => {

@@ -93,6 +93,8 @@ Both modes share a single canvas editor, allowing users to seamlessly blend auto
 | Drag & Drop | @dnd-kit/core | Modern, accessible drag-drop library |
 | Image Processing | Cropper.js + node-vibrant | Client-side cropping, color extraction |
 | Testing | Vitest + @testing-library/react | Unit, integration, and hook tests |
+| Toast Notifications | Sonner | User feedback for mutations and errors |
+| Error Tracking | Sentry | Production error monitoring and alerts |
 
 ## Testing Guidelines
 
@@ -102,11 +104,19 @@ Both modes share a single canvas editor, allowing users to seamlessly blend auto
 
 | Category | Tests | Coverage | Location |
 |----------|-------|----------|----------|
-| Tracker Utilities | 68 tests | 96%+ statements | `src/lib/tracker/__tests__/` |
+| General Utilities | 4 tests | High | `src/lib/utils.test.ts` |
+| Custom Error Classes | 32 tests | 100% statements | `src/lib/__tests__/errors.test.ts` |
+| Server Action Helpers | 21 tests | 100% statements | `src/lib/__tests__/server-action-helpers.test.ts` |
+| Validation Schemas | 54 tests | 100% statements | `src/lib/validation/__tests__/tracker.test.ts` |
+| Tracker Utilities | 64 tests | 96%+ statements | `src/lib/tracker/__tests__/utils.test.ts` |
+| CardSlot Component | 35 tests | 100% statements, 97.56% branches | `src/components/tracker/__tests__/CardSlot.test.tsx` |
+| BinderView Component | 35 tests | 98% statements, 88.15% branches | `src/components/tracker/__tests__/BinderView.test.tsx` |
 | Collection Hooks | 15 tests | 78% statements | `src/hooks/tracker/__tests__/useCollection.test.tsx` |
 | Preferences Hook | 7 tests | 97% statements | `src/hooks/tracker/__tests__/useTrackerPreferences.test.tsx` |
 
-**Total:** 90 tests covering core tracker functionality
+**Total:** 267 tests covering core tracker functionality, error handling, validation, and components
+
+**Note on Coverage:** Overall coverage is lower (~47%) due to untested server actions/queries (integration-tested in production) and infrastructure code (Sentry configs, error boundaries). Core business logic maintains 70%+ coverage.
 
 ### When to Run Tests
 
@@ -232,18 +242,529 @@ Current thresholds in `vitest.config.ts`:
 **✅ Always Test:**
 - Pure utility functions (sorting, filtering, calculations)
 - React Query hooks (mutations, optimistic updates, rollbacks)
+- UI components (interaction logic, rendering states, event handlers)
 - Business logic (pricing, permissions, calculations)
 - Edge cases (empty arrays, null values, boundary conditions)
 
 **⏸️ Test Later (Lower Priority):**
-- UI components (visual appearance, user interactions)
 - Server actions (already covered by hook tests)
 - Database queries (covered by integration tests when needed)
+- Visual styling (covered by visual regression tests when needed)
 
 **❌ Don't Test:**
 - Third-party libraries (trust they work)
 - Simple type definitions
 - Configuration files
+
+## Error Handling
+
+**CRITICAL: All errors must provide helpful user feedback. Never let errors disappear silently.**
+
+### Error Handling System Overview
+
+The BinderDex error handling system has six layers:
+
+1. **Custom Error Classes** (`src/lib/errors.ts`) - Type-safe errors with user-friendly messages
+2. **Server Action Error Mapping** (`src/lib/server-action-helpers.ts`) - Translates database/API errors
+3. **Toast Notifications** (Sonner) - User feedback for all mutations
+4. **Error Boundaries** - Prevent crashes, show recovery UI
+5. **Query Error States** - Retry UI for failed data fetches
+6. **Sentry Integration** - Production error tracking
+
+### Quick Start Guide
+
+**For adding error handling to new features, follow these patterns:**
+
+#### 1. Adding Error Handling to a New Mutation
+
+```typescript
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+
+export function useMyMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (data) => {
+      const result = await myServerAction(data)
+      if (result.error) {
+        throw new Error(result.error)
+      }
+      return result.data
+    },
+    onMutate: async (data) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['myData'] })
+
+      // Snapshot for rollback
+      const previousData = queryClient.getQueryData(['myData'])
+
+      // Optimistic update
+      queryClient.setQueryData(['myData'], (old) => {
+        // Update logic here
+        return newData
+      })
+
+      return { previousData }
+    },
+    onError: (err, _data, context) => {
+      // Rollback optimistic update
+      if (context?.previousData) {
+        queryClient.setQueryData(['myData'], context.previousData)
+      }
+      // Show error toast
+      toast.error(err instanceof Error ? err.message : 'Failed to save')
+    },
+    onSuccess: () => {
+      // Show success toast
+      toast.success('Saved successfully')
+
+      // Background sync related data
+      queryClient.invalidateQueries({
+        queryKey: ['relatedData'],
+        refetchType: 'none'
+      })
+    },
+  })
+}
+```
+
+#### 2. Adding Error Handling to a New Query
+
+```typescript
+import { useQuery } from '@tanstack/react-query'
+
+export function useMyQuery(id: string) {
+  return useQuery({
+    queryKey: ['myData', id],
+    queryFn: async () => {
+      const result = await myServerAction(id)
+      if (result.error) {
+        throw new Error(result.error)
+      }
+      return result.data
+    },
+    enabled: !!id,
+  })
+}
+
+// In component:
+function MyComponent() {
+  const { data, isError, error, refetch } = useMyQuery(id)
+
+  // Handle error state
+  if (isError) {
+    return (
+      <div className="error-container">
+        <h2>Failed to Load</h2>
+        <p>{error?.message}</p>
+        <button onClick={() => refetch()}>Try Again</button>
+      </div>
+    )
+  }
+
+  // Handle loading and success states...
+}
+```
+
+#### 3. Adding Error Handling to a New Server Action
+
+```typescript
+import { withMultiParamValidation } from '@/lib/server-action-helpers'
+import { AuthenticationError, DatabaseError, NotFoundError } from '@/lib/errors'
+import { myActionSchema } from '@/lib/validation/myModule'
+
+export async function myServerAction(param: string) {
+  return withMultiParamValidation(
+    myActionSchema,
+    { param },
+    async ({ param }) => {
+      const supabase = await createClient()
+
+      // 1. Check authentication
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new AuthenticationError()
+      }
+
+      // 2. Fetch data
+      const { data, error } = await supabase
+        .from('table')
+        .select('*')
+        .eq('id', param)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          throw new NotFoundError('Resource not found')
+        }
+        throw new DatabaseError(error.message)
+      }
+
+      // 3. Return success
+      return { data, error: null }
+    }
+  )
+}
+```
+
+#### 4. When to Use Which Error Type
+
+| Scenario | Error Type | Example |
+|----------|------------|---------|
+| User not logged in | `AuthenticationError` | `if (!user) throw new AuthenticationError()` |
+| User lacks permission | `AuthorizationError` | `if (resource.userId !== user.id) throw new AuthorizationError()` |
+| Resource doesn't exist | `NotFoundError` | `if (!data) throw new NotFoundError('Card not found')` |
+| Duplicate resource | `ConflictError` | `if (exists) throw new ConflictError('Already exists')` |
+| Database operation failed | `DatabaseError` | `if (error) throw new DatabaseError(error.message)` |
+| External API failed | `NetworkError` | `if (response.status >= 500) throw new NetworkError()` |
+| Validation failed | `ValidationError` | Automatically handled by `withValidation()` |
+| Unknown error | `AppError` | `throw new AppError('Something went wrong')` |
+
+### Custom Error Classes
+
+**Location**: `src/lib/errors.ts`
+
+All errors extend `AppError` base class with:
+- Developer message (logged to console/Sentry)
+- User message (shown in UI)
+- HTTP status code
+- Error code for programmatic handling
+
+**Available Error Types:**
+```typescript
+ValidationError      // 400 - Invalid user input
+AuthenticationError  // 401 - User not logged in
+AuthorizationError   // 403 - Permission denied
+NotFoundError        // 404 - Resource not found
+ConflictError        // 409 - Duplicate resource
+DatabaseError        // 500 - Database operation failed
+NetworkError         // 503 - External service unavailable
+AppError             // 500 - Generic application error
+```
+
+**Helper Functions:**
+- `mapSupabaseError(error)` - Converts Postgres error codes to AppError
+- `isAppError(error)` - Type guard for AppError instances
+
+**Usage in Server Actions:**
+```typescript
+import { AuthenticationError, DatabaseError } from '@/lib/errors'
+
+const { data: { user } } = await supabase.auth.getUser()
+if (!user) {
+  throw new AuthenticationError() // User message: "Please log in to continue"
+}
+
+const { error } = await supabase.from('table').insert(data)
+if (error) {
+  throw new DatabaseError(error.message) // Logged, but shown as "Database error occurred"
+}
+```
+
+### Server Action Error Handling
+
+**Location**: `src/lib/server-action-helpers.ts`
+
+All server actions wrapped with validation helpers automatically:
+- Catch validation errors → return user-friendly messages
+- Catch AppError instances → return userMessage
+- Catch Supabase RLS errors → return "You don't have permission..."
+- Catch Postgres constraint violations → return "Invalid data. Please check your input."
+- Catch unknown errors → return "Something went wrong. Please try again."
+
+**Error Mapping Example:**
+```typescript
+// Server action throws AuthenticationError
+throw new AuthenticationError()
+
+// withValidation catches it and returns:
+{ data: null, error: "Please log in to continue" }
+
+// Hook receives error message and shows toast
+toast.error("Please log in to continue")
+```
+
+### Toast Notifications
+
+**Library**: Sonner (`sonner`)
+**Component**: `src/components/ui/toaster.tsx`
+**Configuration**:
+- Position: top-right
+- Duration: 4 seconds
+- Rich colors enabled
+- Close button enabled
+
+**Usage in Hooks:**
+```typescript
+import { toast } from 'sonner'
+
+// Success toast
+toast.success('Card marked as owned')
+
+// Error toast (from caught error)
+toast.error(err instanceof Error ? err.message : 'Failed to update card')
+
+// Error toast (from server action result)
+if (result.error) {
+  toast.error(result.error)
+}
+```
+
+**Toast Guidelines:**
+- ✅ Success: Brief confirmation ("Card marked as owned", "Changes saved")
+- ❌ Error: Include helpful context from error message
+- ℹ️ Info: For non-critical updates
+- ⏳ Loading: For long-running operations (optional)
+
+**All Mutations Have Toasts:**
+- `useToggleOwned` - Error toast on failure
+- `useUpdateCollectionEntry` - Error + success toasts
+- `useUntrackPromo` - Error + success toasts
+- `useRestorePromo` - Error + success toasts
+- `useResetHiddenPromos` - Error + success toasts
+- `useTrackerPreferences` - Error toast on save failure
+- `useBulkActions` (6 functions) - Error + success toasts with counts
+
+### Error Boundaries
+
+**Location**:
+- `src/components/ErrorBoundary.tsx` - Generic boundary
+- `src/components/tracker/TrackerErrorFallback.tsx` - Tracker-specific UI
+
+**Boundary Placement:**
+- **Root Boundary** (via `QueryProvider`) - Catches catastrophic errors, reloads page on retry
+- **Tracker Page Boundary** - Catches tracker-specific errors, custom fallback UI
+
+**Features:**
+- Catches React rendering errors
+- Displays error message to user
+- Provides retry button
+- Sends errors to Sentry (production)
+
+**Example Fallback UI:**
+```typescript
+<ErrorBoundary
+  fallback={
+    <TrackerErrorFallback
+      error={new Error("Failed to load tracker")}
+      resetErrorBoundary={() => window.location.reload()}
+    />
+  }
+>
+  {/* App content */}
+</ErrorBoundary>
+```
+
+### Query Error States
+
+**Pattern**: Check `isError` state from React Query, show retry UI
+
+**Example** (`src/app/tracker/[setId]/page.tsx`):
+```typescript
+const { data, isError, error, refetch } = useQuery({
+  queryKey: ["set", setId],
+  queryFn: async () => {
+    const result = await getSetById(setId)
+    if (result.error) throw new Error(result.error)
+    return result.data
+  },
+})
+
+// Error state - show retry UI
+if (isError) {
+  return (
+    <div className="error-container">
+      <h2>Failed to Load</h2>
+      <p>{error?.message}</p>
+      <button onClick={() => refetch()}>Try Again</button>
+    </div>
+  )
+}
+```
+
+**Query Error Handling Locations:**
+- `src/app/tracker/[setId]/page.tsx` - Set data, preferences, and cards queries
+
+### Sentry Integration
+
+**Configuration Files:**
+- `sentry.client.config.ts` - Browser-side error tracking
+- `sentry.server.config.ts` - Server-side error tracking
+- `sentry.edge.config.ts` - Edge runtime error tracking
+- `next.config.mjs` - Sentry webpack plugin
+
+**Environment Variables Required:**
+```bash
+NEXT_PUBLIC_SENTRY_DSN=https://...@sentry.io/...
+SENTRY_ORG=your-organization-slug
+SENTRY_PROJECT=your-project-slug
+SENTRY_AUTH_TOKEN=your-auth-token
+```
+
+**Error Filtering:**
+- Validation errors (user mistakes) are NOT sent to Sentry
+- Authentication errors (expected) are NOT sent to Sentry
+- Database errors, network errors, and unhandled exceptions ARE sent to Sentry
+
+**Error Context:**
+- React component stack (from error boundaries)
+- User ID (when available)
+- Request URL and method
+- Error code and type
+
+**Monitoring Checklist:**
+1. Check Sentry dashboard weekly for new error patterns
+2. Set up alerts for critical errors (database, auth system)
+3. Monitor error rate trends
+4. Review user-reported errors for patterns
+
+### Error Handling Best Practices
+
+**DO:**
+- ✅ Show user-friendly error messages (not technical details)
+- ✅ Provide retry buttons for transient failures
+- ✅ Log technical details to console and Sentry
+- ✅ Use toast notifications for mutation feedback
+- ✅ Check query `isError` state and display retry UI
+- ✅ Rollback optimistic updates on error
+- ✅ Include error context in Sentry reports
+
+**DON'T:**
+- ❌ Show raw database error messages to users
+- ❌ Let errors disappear silently (always show feedback)
+- ❌ Crash the entire app (use error boundaries)
+- ❌ Send validation errors to Sentry (noise)
+- ❌ Forget to test error states
+- ❌ Skip rollback logic in optimistic updates
+
+### Error Testing
+
+**Test All Error Paths:**
+```typescript
+// Test mutation error with rollback
+it('rolls back optimistic update on server error', async () => {
+  vi.mocked(toggleCardOwned).mockResolvedValue({
+    data: null,
+    error: 'Server error',
+  })
+
+  await act(async () => {
+    result.current.mutate('variant-1')
+  })
+
+  await waitFor(() => expect(result.current.isError).toBe(true))
+
+  // Verify rollback
+  const cachedData = queryClient.getQueryData(queryKey)
+  expect(cachedData).toEqual(previousState)
+
+  // Verify toast
+  expect(toast.error).toHaveBeenCalledWith('Server error')
+})
+```
+
+**Mock Sonner in Tests** (`src/test/setup.tsx`):
+```typescript
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+  Toaster: () => null,
+}))
+```
+
+## Code Architecture
+
+### Validation Layer (Zod)
+
+**All server action mutations are validated** using Zod schemas before database operations.
+
+**Location**: `src/lib/validation/`
+- `common.ts` - Reusable validation utilities (UUID, enums, dates, numbers)
+- `tracker.ts` - Tracker-specific schemas (collection, preferences, bulk actions, promos)
+
+**Validation Helpers**: `src/lib/server-action-helpers.ts`
+- `withValidation()` - Wraps actions returning data
+- `withSimpleValidation()` - Wraps actions with simple error responses
+- `withMultiParamValidation()` - For multi-parameter actions with data
+- `withSimpleMultiParamValidation()` - For multi-parameter actions with simple responses
+
+**Example:**
+```typescript
+export async function toggleCardOwned(variantId: string) {
+  return withMultiParamValidation(
+    toggleCardOwnedSchema,
+    { variantId },
+    async ({ variantId }) => {
+      // Validated input guaranteed to be UUID
+      // ... implementation
+    }
+  );
+}
+```
+
+**Benefits:**
+- ✅ Runtime type safety beyond TypeScript
+- ✅ Protection against invalid UUIDs, malformed data
+- ✅ User-friendly error messages
+- ✅ Consistent error handling patterns
+
+### Modular Server Actions
+
+**Tracker actions are organized into focused modules** for better maintainability.
+
+**Structure**: `src/lib/tracker/`
+```
+├── queries/              (Read-only operations)
+│   ├── sets.ts          - getAvailableSets, getTrackedSetIds, getSetById, etc.
+│   ├── variants.ts      - getSetVariantsWithCollection, getSetVariants
+│   ├── collection.ts    - getUserCollectionForSet
+│   ├── preferences.ts   - getTrackerPreferences
+│   └── promos.ts        - getHiddenPromoCount, getHiddenPromos
+├── mutations/            (Write operations)
+│   ├── collection.ts    - toggleCardOwned, updateCollectionEntry
+│   ├── preferences.ts   - updateTrackerPreferences
+│   ├── bulk.ts          - bulkMarkAsOwned, bulkUnmarkOwned
+│   └── promos.ts        - untrackPromo, restorePromo, resetPromoPreferences
+├── tracker-utils.ts      (Shared utilities)
+└── index.ts              (Barrel export - re-exports everything)
+```
+
+**Usage:**
+```typescript
+// Import from barrel export (clean interface)
+import { getAvailableSets, toggleCardOwned } from '@/lib/tracker'
+
+// OR import specific module (if needed)
+import { toggleCardOwned } from '@/lib/tracker/mutations/collection'
+```
+
+**Benefits:**
+- ✅ Clear separation: queries vs mutations
+- ✅ Smaller files (~150 lines each vs 1,600+ monolithic)
+- ✅ Easier code navigation and reviews
+- ✅ Reduced merge conflicts
+- ✅ Scalable structure for future features
+
+### Testing Modular Actions
+
+When mocking server actions in tests, **mock the specific module**:
+
+```typescript
+// Mock collection mutations
+vi.mock('@/lib/tracker/mutations/collection', () => ({
+  toggleCardOwned: vi.fn(),
+  updateCollectionEntry: vi.fn(),
+}))
+
+// Mock preferences queries
+vi.mock('@/lib/tracker/queries/preferences', () => ({
+  getTrackerPreferences: vi.fn(),
+}))
+```
 
 ## Supabase Project
 
@@ -401,6 +922,8 @@ custom_images: id, user_id, storage_path, original_filename, file_size,
 4. **Shared filter system** - ONE reusable filter component/hook/store used by Browse, Builder, and ChromaDex
 5. **Pre-computed ChromaDex data** - Color extraction runs as batch job during data import
 6. **Supabase as sole backend** - Auth + DB + Storage in one platform with RLS
+7. **Input Validation Layer** - All mutations validated with Zod schemas (`src/lib/validation/`) before database operations. Protects against invalid data, SQL injection, and provides user-friendly error messages.
+8. **Modular Server Actions** - Tracker actions split into focused modules (`src/lib/tracker/queries/` and `src/lib/tracker/mutations/`) for better organization and maintainability. Barrel export (`index.ts`) provides clean import interface.
 
 ## Data Source
 
@@ -548,14 +1071,17 @@ chore: description         # Maintenance
 ## Important Rules
 
 1. **Use agents extensively** - Offload exploration to Explore agents, bugs to binderdex-bug-fixer agent
-2. **Never show variants in Browse** - only unique cards
-3. **Filter system must be shared** - don't duplicate filter logic
-4. **ChromaDex data is pre-computed** - colors extracted during data import, not at runtime
-5. **RLS on all user tables** - enforce at database level
-6. **Optimistic updates** - for responsive drag-and-drop UX
-7. **URL sync for filters** - filters should be shareable via URL params
-8. **Magic UI first** - always use Magic UI components before falling back to plain Tailwind CSS
-9. **Unified Builder architecture** - ChromaDex and Michi share the same canvas editor
+2. **Run tests before committing** - `npm test` must pass before any commit. Tests are your safety net.
+3. **Validate all mutations** - Use Zod schemas from `src/lib/validation/` for all server action mutations
+4. **Import from tracker barrel** - Use `import { ... } from '@/lib/tracker'` for clean imports
+5. **Never show variants in Browse** - only unique cards
+6. **Filter system must be shared** - don't duplicate filter logic
+7. **ChromaDex data is pre-computed** - colors extracted during data import, not at runtime
+8. **RLS on all user tables** - enforce at database level
+9. **Optimistic updates** - for responsive drag-and-drop UX
+10. **URL sync for filters** - filters should be shareable via URL params
+11. **Magic UI first** - always use Magic UI components before falling back to plain Tailwind CSS
+12. **Unified Builder architecture** - ChromaDex and Michi share the same canvas editor
 
 ## Environment Variables
 

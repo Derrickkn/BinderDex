@@ -42,3 +42,16 @@ vi.mock('next/image', () => ({
     return <img {...props} />
   },
 }))
+
+// Mock Sonner toast notifications
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+  },
+  Toaster: () => null,
+}))

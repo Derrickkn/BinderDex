@@ -16,23 +16,32 @@ import {
 import type { TrackerCard } from '@/lib/types/tracker'
 
 // Mock server actions
-vi.mock('@/lib/tracker/actions', () => ({
+vi.mock('@/lib/tracker/mutations/collection', () => ({
   toggleCardOwned: vi.fn(),
   updateCollectionEntry: vi.fn(),
+}))
+
+vi.mock('@/lib/tracker/mutations/promos', () => ({
   untrackPromo: vi.fn(),
   restorePromo: vi.fn(),
+  resetPromoPreferences: vi.fn(),
+}))
+
+vi.mock('@/lib/tracker/queries/promos', () => ({
   getHiddenPromoCount: vi.fn(),
   getHiddenPromos: vi.fn(),
-  resetPromoPreferences: vi.fn(),
 }))
 
 // Import mocked functions
 import {
   toggleCardOwned,
   updateCollectionEntry,
+} from '@/lib/tracker/mutations/collection'
+
+import {
   untrackPromo,
   restorePromo,
-} from '@/lib/tracker/actions'
+} from '@/lib/tracker/mutations/promos'
 
 describe('Collection Hooks - Optimistic Updates', () => {
   beforeEach(() => {

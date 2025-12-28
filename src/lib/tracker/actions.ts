@@ -8,6 +8,16 @@ import {
   TrackerPreferences,
   CollectionEntryUpdate,
 } from "@/lib/types/tracker";
+import { withMultiParamValidation, withSimpleMultiParamValidation } from "@/lib/server-action-helpers";
+import {
+  toggleCardOwnedSchema,
+  updateCollectionEntrySchema,
+  updateTrackerPreferencesSchema,
+  untrackPromoSchema,
+  restorePromoSchema,
+  bulkMarkAsOwnedSchema,
+  bulkUnmarkOwnedSchema,
+} from "@/lib/validation/tracker";
 
 /**
  * Helper function to get sort order for variant types
@@ -544,55 +554,61 @@ export async function updateTrackerPreferences(
   setId: string,
   preferences: Partial<TrackerPreferences>
 ): Promise<{ error: string | null }> {
-  const supabase = await createClient();
+  return withSimpleMultiParamValidation(
+    updateTrackerPreferencesSchema,
+    { setId, preferences },
+    async ({ setId, preferences }) => {
+      const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { error: "Must be logged in to save preferences" };
-  }
+      if (!user) {
+        return { error: "Must be logged in to save preferences" };
+      }
 
-  const updateData: Record<string, unknown> = {};
-  if (preferences.slotConfig !== undefined) {
-    updateData.slot_config = preferences.slotConfig;
-  }
-  if (preferences.includePromos !== undefined) {
-    updateData.include_promos = preferences.includePromos;
+      const updateData: Record<string, unknown> = {};
+      if (preferences.slotConfig !== undefined) {
+        updateData.slot_config = preferences.slotConfig;
+      }
+      if (preferences.includePromos !== undefined) {
+        updateData.include_promos = preferences.includePromos;
 
-    // When user toggles promos ON, reset all promo preferences (re-enable all untracked promos)
-    // This allows users to restore previously untracked promos by toggling off and on
-    if (preferences.includePromos === true) {
-      await resetPromoPreferences(setId);
-    }
-  }
-  if (preferences.includeReverseHolos !== undefined) {
-    updateData.include_reverse_holos = preferences.includeReverseHolos;
-  }
-  if (preferences.includePokeball !== undefined) {
-    updateData.include_pokeball = preferences.includePokeball;
-  }
-  if (preferences.includeMasterball !== undefined) {
-    updateData.include_masterball = preferences.includeMasterball;
-  }
+        // When user toggles promos ON, reset all promo preferences (re-enable all untracked promos)
+        // This allows users to restore previously untracked promos by toggling off and on
+        if (preferences.includePromos === true) {
+          await resetPromoPreferences(setId);
+        }
+      }
+      if (preferences.includeReverseHolos !== undefined) {
+        updateData.include_reverse_holos = preferences.includeReverseHolos;
+      }
+      if (preferences.includePokeball !== undefined) {
+        updateData.include_pokeball = preferences.includePokeball;
+      }
+      if (preferences.includeMasterball !== undefined) {
+        updateData.include_masterball = preferences.includeMasterball;
+      }
 
-  const { error } = await supabase.from("master_set_preferences").upsert(
-    {
-      user_id: user.id,
-      set_id: setId,
-      ...updateData,
-    },
-    {
-      onConflict: "user_id,set_id",
+      const { error } = await supabase.from("master_set_preferences").upsert(
+        {
+          user_id: user.id,
+          set_id: setId,
+          ...updateData,
+        },
+        {
+          onConflict: "user_id,set_id",
+        }
+      );
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { error: null };
     }
   );
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { error: null };
 }
 
 /**
@@ -602,62 +618,68 @@ export async function toggleCardOwned(variantId: string): Promise<{
   data: { owned: boolean; quantity: number } | null;
   error: string | null;
 }> {
-  const supabase = await createClient();
+  return withMultiParamValidation(
+    toggleCardOwnedSchema,
+    { variantId },
+    async ({ variantId }) => {
+      const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { data: null, error: "Must be logged in to track collection" };
-  }
+      if (!user) {
+        return { data: null, error: "Must be logged in to track collection" };
+      }
 
-  // Check if entry exists
-  const { data: existing } = await supabase
-    .from("user_collections")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("variant_id", variantId)
-    .single();
+      // Check if entry exists
+      const { data: existing } = await supabase
+        .from("user_collections")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("variant_id", variantId)
+        .single();
 
-  if (existing && existing.quantity > 0) {
-    // Mark as not owned
-    const { error } = await supabase
-      .from("user_collections")
-      .update({ quantity: 0 })
-      .eq("id", existing.id);
+      if (existing && existing.quantity > 0) {
+        // Mark as not owned
+        const { error } = await supabase
+          .from("user_collections")
+          .update({ quantity: 0 })
+          .eq("id", existing.id);
 
-    if (error) {
-      return { data: null, error: error.message };
+        if (error) {
+          return { data: null, error: error.message };
+        }
+
+        return { data: { owned: false, quantity: 0 }, error: null };
+      } else if (existing) {
+        // Mark as owned
+        const { error } = await supabase
+          .from("user_collections")
+          .update({ quantity: 1 })
+          .eq("id", existing.id);
+
+        if (error) {
+          return { data: null, error: error.message };
+        }
+
+        return { data: { owned: true, quantity: 1 }, error: null };
+      } else {
+        // Create new entry
+        const { error } = await supabase.from("user_collections").insert({
+          user_id: user.id,
+          variant_id: variantId,
+          quantity: 1,
+        });
+
+        if (error) {
+          return { data: null, error: error.message };
+        }
+
+        return { data: { owned: true, quantity: 1 }, error: null };
+      }
     }
-
-    return { data: { owned: false, quantity: 0 }, error: null };
-  } else if (existing) {
-    // Mark as owned
-    const { error } = await supabase
-      .from("user_collections")
-      .update({ quantity: 1 })
-      .eq("id", existing.id);
-
-    if (error) {
-      return { data: null, error: error.message };
-    }
-
-    return { data: { owned: true, quantity: 1 }, error: null };
-  } else {
-    // Create new entry
-    const { error } = await supabase.from("user_collections").insert({
-      user_id: user.id,
-      variant_id: variantId,
-      quantity: 1,
-    });
-
-    if (error) {
-      return { data: null, error: error.message };
-    }
-
-    return { data: { owned: true, quantity: 1 }, error: null };
-  }
+  );
 }
 
 /**
@@ -667,56 +689,62 @@ export async function updateCollectionEntry(
   variantId: string,
   data: CollectionEntryUpdate
 ): Promise<{ error: string | null }> {
-  const supabase = await createClient();
+  return withSimpleMultiParamValidation(
+    updateCollectionEntrySchema,
+    { variantId, data },
+    async ({ variantId, data }) => {
+      const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { error: "Must be logged in to update collection" };
-  }
+      if (!user) {
+        return { error: "Must be logged in to update collection" };
+      }
 
-  // Check if entry exists
-  const { data: existing } = await supabase
-    .from("user_collections")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("variant_id", variantId)
-    .single();
+      // Check if entry exists
+      const { data: existing } = await supabase
+        .from("user_collections")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("variant_id", variantId)
+        .single();
 
-  if (existing) {
-    // Update existing entry
-    const { error } = await supabase
-      .from("user_collections")
-      .update({
-        quantity: data.quantity,
-        condition: data.condition,
-        notes: data.notes,
-        acquired_date: data.acquired_date,
-      })
-      .eq("id", existing.id);
+      if (existing) {
+        // Update existing entry
+        const { error } = await supabase
+          .from("user_collections")
+          .update({
+            quantity: data.quantity,
+            condition: data.condition,
+            notes: data.notes,
+            acquired_date: data.acquired_date,
+          })
+          .eq("id", existing.id);
 
-    if (error) {
-      return { error: error.message };
+        if (error) {
+          return { error: error.message };
+        }
+      } else {
+        // Create new entry
+        const { error } = await supabase.from("user_collections").insert({
+          user_id: user.id,
+          variant_id: variantId,
+          quantity: data.quantity,
+          condition: data.condition,
+          notes: data.notes,
+          acquired_date: data.acquired_date,
+        });
+
+        if (error) {
+          return { error: error.message };
+        }
+      }
+
+      return { error: null };
     }
-  } else {
-    // Create new entry
-    const { error } = await supabase.from("user_collections").insert({
-      user_id: user.id,
-      variant_id: variantId,
-      quantity: data.quantity,
-      condition: data.condition,
-      notes: data.notes,
-      acquired_date: data.acquired_date,
-    });
-
-    if (error) {
-      return { error: error.message };
-    }
-  }
-
-  return { error: null };
+  );
 }
 
 /**
@@ -981,6 +1009,12 @@ export async function bulkMarkAsOwned(
   criteria: BulkMarkCriteria,
   preferences: TrackerPreferences
 ): Promise<{ count: number; error: string | null }> {
+  // Validate input
+  const validationResult = bulkMarkAsOwnedSchema.safeParse({ setId, criteria, preferences });
+  if (!validationResult.success) {
+    return { count: 0, error: validationResult.error.errors[0]?.message || "Invalid input" };
+  }
+
   const supabase = await createClient();
 
   const {
@@ -1071,6 +1105,12 @@ export async function bulkUnmarkOwned(
   criteria: BulkMarkCriteria,
   preferences: TrackerPreferences
 ): Promise<{ count: number; error: string | null }> {
+  // Validate input
+  const validationResult = bulkUnmarkOwnedSchema.safeParse({ setId, criteria, preferences });
+  if (!validationResult.success) {
+    return { count: 0, error: validationResult.error.errors[0]?.message || "Invalid input" };
+  }
+
   const supabase = await createClient();
 
   const {
@@ -1267,34 +1307,40 @@ export async function untrackPromo(
   promoId: string,
   setId: string
 ): Promise<{ error: string | null }> {
-  const supabase = await createClient();
+  return withSimpleMultiParamValidation(
+    untrackPromoSchema,
+    { promoId, setId },
+    async ({ promoId, setId }) => {
+      const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { error: "Authentication required" };
-  }
+      if (!user) {
+        return { error: "Authentication required" };
+      }
 
-  // Upsert: if exists, set is_tracked=false; if not, create new entry
-  const { error } = await supabase.from("user_promo_preferences").upsert(
-    {
-      user_id: user.id,
-      set_id: setId,
-      promo_id: promoId,
-      is_tracked: false,
-    },
-    {
-      onConflict: "user_id,promo_id",
+      // Upsert: if exists, set is_tracked=false; if not, create new entry
+      const { error } = await supabase.from("user_promo_preferences").upsert(
+        {
+          user_id: user.id,
+          set_id: setId,
+          promo_id: promoId,
+          is_tracked: false,
+        },
+        {
+          onConflict: "user_id,promo_id",
+        }
+      );
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { error: null };
     }
   );
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { error: null };
 }
 
 /**
@@ -1518,28 +1564,34 @@ export async function restorePromo(
   promoId: string,
   setId: string
 ): Promise<{ error: string | null }> {
-  const supabase = await createClient();
+  return withSimpleMultiParamValidation(
+    restorePromoSchema,
+    { promoId, setId },
+    async ({ promoId, setId }) => {
+      const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { error: "Authentication required" };
-  }
+      if (!user) {
+        return { error: "Authentication required" };
+      }
 
-  // Delete the preference entry to restore the promo
-  const { error } = await supabase
-    .from("user_promo_preferences")
-    .delete()
-    .eq("user_id", user.id)
-    .eq("set_id", setId)
-    .eq("promo_id", promoId);
+      // Delete the preference entry to restore the promo
+      const { error } = await supabase
+        .from("user_promo_preferences")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("set_id", setId)
+        .eq("promo_id", promoId);
 
-  if (error) {
-    return { error: error.message };
-  }
+      if (error) {
+        return { error: error.message };
+      }
 
-  return { error: null };
+      return { error: null };
+    }
+  );
 }
 

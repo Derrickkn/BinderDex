@@ -4,10 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getTrackerPreferences,
   updateTrackerPreferences,
-} from "@/lib/tracker/actions";
+} from "@/lib/tracker";
 import { TrackerPreferences } from "@/lib/types/tracker";
 import { useTrackerStore } from "@/hooks/useTrackerStore";
 import { useEffect, useCallback } from "react";
+import { toast } from "sonner";
 
 export const preferencesKeys = {
   all: ["preferences"] as const,
@@ -62,7 +63,7 @@ export function useTrackerPreferences(setId: string) {
 
       return { previousPreferences };
     },
-    onError: (_err, _newPrefs, context) => {
+    onError: (err, _newPrefs, context) => {
       // Roll back to previous value on error
       if (context?.previousPreferences) {
         queryClient.setQueryData(
@@ -72,7 +73,9 @@ export function useTrackerPreferences(setId: string) {
         // Also roll back the store
         setPreferences(context.previousPreferences);
       }
-      console.error("Failed to save preferences:", _err);
+      console.error("Failed to save preferences:", err);
+      // Show error toast
+      toast.error(err instanceof Error ? err.message : 'Failed to save preferences');
     },
     onSettled: () => {
       // Always refetch after error or success

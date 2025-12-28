@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getSetById } from "@/lib/tracker/actions";
+import { getSetById } from "@/lib/tracker";
 import { useSetVariants, useTrackerPreferences, useToggleOwned, useUpdateCollectionEntry, useUntrackPromo, useHiddenPromos, useRestorePromo, useBulkActions, type BulkActionResult } from "@/hooks/tracker";
 import { useTrackerStore } from "@/hooks/useTrackerStore";
 import {
@@ -19,6 +19,8 @@ import {
 } from "@/components/tracker";
 import { calculateProgress } from "@/lib/tracker/utils";
 import { CollectionEntryUpdate } from "@/lib/types/tracker";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TrackerErrorFallback } from "@/components/tracker/TrackerErrorFallback";
 
 export default function TrackerSetPage() {
   const params = useParams();
@@ -40,7 +42,7 @@ export default function TrackerSetPage() {
   const { preferences, selectedVariantId, isModalOpen, openModal, closeModal } = useTrackerStore();
 
   // Fetch set data
-  const { data: set, isLoading: isLoadingSet } = useQuery({
+  const { data: set, isLoading: isLoadingSet, isError: isSetError, error: setError, refetch: refetchSet } = useQuery({
     queryKey: ["set", setId],
     queryFn: async () => {
       const result = await getSetById(setId);
@@ -51,14 +53,14 @@ export default function TrackerSetPage() {
   });
 
   // Fetch and sync preferences
-  const { data: serverPreferences, isLoading: isLoadingPreferences, updatePreferences, isUpdating: isUpdatingPreferences } = useTrackerPreferences(setId);
+  const { data: serverPreferences, isLoading: isLoadingPreferences, isError: isPreferencesError, error: preferencesError, updatePreferences, isUpdating: isUpdatingPreferences } = useTrackerPreferences(setId);
 
   // Use server preferences if available, fall back to store preferences
   // This prevents layout shift when serverPreferences loads after initial render
   const currentPreferences = serverPreferences || preferences;
 
   // Fetch cards with variants
-  const { data: cards, isLoading: isLoadingCards } = useSetVariants(setId, currentPreferences);
+  const { data: cards, isLoading: isLoadingCards, isError: isCardsError, error: cardsError, refetch: refetchCards } = useSetVariants(setId, currentPreferences);
 
   // Mutations - pass currentPreferences so they use the same query key as useSetVariants
   const toggleOwned = useToggleOwned(setId, currentPreferences);
@@ -242,6 +244,42 @@ export default function TrackerSetPage() {
     }
   };
 
+  // Error state - show retry UI if any query fails
+  if (isSetError || isPreferencesError || isCardsError) {
+    const errorMessage = (setError || preferencesError || cardsError)?.message || 'Failed to load tracker data';
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="mb-4">
+            <svg className="mx-auto h-16 w-16 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-2 text-white">Failed to Load</h2>
+          <p className="text-zinc-400 mb-6">{errorMessage}</p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => window.location.href = '/tracker'}
+              className="px-4 py-2 bg-zinc-800 text-white rounded-lg hover:bg-zinc-700 transition-colors"
+            >
+              Back to Sets
+            </button>
+            <button
+              onClick={() => {
+                if (isSetError) refetchSet();
+                if (isCardsError) refetchCards();
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Loading state - wait for both set and preferences to load
   if (isLoadingSet || !set || isLoadingPreferences || !serverPreferences) {
     return (
@@ -271,15 +309,23 @@ export default function TrackerSetPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      {/* Header */}
-      <TrackerHeader
-        set={set}
-        progress={progress}
-      />
+    <ErrorBoundary
+      fallback={
+        <TrackerErrorFallback
+          error={new Error("Failed to load tracker")}
+          resetErrorBoundary={() => window.location.reload()}
+        />
+      }
+    >
+      <div className="min-h-screen bg-[#0a0a0a]">
+        {/* Header */}
+        <TrackerHeader
+          set={set}
+          progress={progress}
+        />
 
-      {/* Toolbar with Quick Fill, Slot Config, Toggles */}
-      <TrackerToolbar
+        {/* Toolbar with Quick Fill, Slot Config, Toggles */}
+        <TrackerToolbar
         slotConfig={currentPreferences.slotConfig}
         onSlotConfigChange={handleSlotConfigChange}
         includePromos={currentPreferences.includePromos}
@@ -357,6 +403,7 @@ export default function TrackerSetPage() {
           }
         }}
       />
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

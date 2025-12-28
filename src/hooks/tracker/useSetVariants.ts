@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { getSetVariantsWithCollection } from "@/lib/tracker/actions";
+import { getSetVariantsWithCollection } from "@/lib/tracker";
 import { TrackerPreferences } from "@/lib/types/tracker";
 
 export const variantKeys = {

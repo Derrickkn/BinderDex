@@ -9,10 +9,11 @@ import {
   getHiddenPromos,
   restorePromo,
   resetPromoPreferences,
-} from "@/lib/tracker/actions";
+} from "@/lib/tracker";
 import { CollectionEntryUpdate, TrackerCard, TrackerPreferences } from "@/lib/types/tracker";
 import { variantKeys } from "./useSetVariants";
 import { setKeys } from "./useAvailableSets";
+import { toast } from "sonner";
 
 /**
  * Optimistic-first card toggle hook.
@@ -58,11 +59,13 @@ export function useToggleOwned(setId: string, preferences: TrackerPreferences) {
 
       return { previousCards, variantId };
     },
-    onError: (_err, _variantId, context) => {
+    onError: (err, _variantId, context) => {
       // Rollback to previous state on error
       if (context?.previousCards) {
         queryClient.setQueryData(queryKey, context.previousCards);
       }
+      // Show error toast
+      toast.error(err instanceof Error ? err.message : 'Failed to update card');
     },
     onSuccess: () => {
       // Background sync: update tracked sets and progress without refetching cards
@@ -128,11 +131,13 @@ export function useUpdateCollectionEntry(setId: string, preferences: TrackerPref
 
       return { previousCards };
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
       // Rollback to previous state on error
       if (context?.previousCards) {
         queryClient.setQueryData(queryKey, context.previousCards);
       }
+      // Show error toast
+      toast.error(err instanceof Error ? err.message : 'Failed to save changes');
     },
     onSuccess: () => {
       // Background sync for tracked sets and progress
@@ -144,6 +149,8 @@ export function useUpdateCollectionEntry(setId: string, preferences: TrackerPref
         queryKey: setKeys.progress(),
         refetchType: 'none'
       });
+      // Show success toast
+      toast.success('Changes saved successfully');
     },
   });
 }
@@ -194,7 +201,7 @@ export function useUntrackPromo(setId: string, preferences: TrackerPreferences) 
 
       return { previousCards, previousHiddenPromos, promoId };
     },
-    onError: (_err, _promoId, context) => {
+    onError: (err, _promoId, context) => {
       // Rollback to previous state on error
       if (context?.previousCards) {
         queryClient.setQueryData(queryKey, context.previousCards);
@@ -202,6 +209,8 @@ export function useUntrackPromo(setId: string, preferences: TrackerPreferences) 
       if (context?.previousHiddenPromos) {
         queryClient.setQueryData(hiddenPromosQueryKey, context.previousHiddenPromos);
       }
+      // Show error toast
+      toast.error(err instanceof Error ? err.message : 'Failed to hide promo');
     },
     onSuccess: () => {
       // Invalidate hidden promo count to show new count
@@ -217,6 +226,8 @@ export function useUntrackPromo(setId: string, preferences: TrackerPreferences) 
         queryKey: setKeys.progress(),
         refetchType: 'none'
       });
+      // Show success toast
+      toast.success('Promo hidden successfully');
     },
   });
 }
@@ -251,6 +262,10 @@ export function useResetHiddenPromos(setId: string, preferences: TrackerPreferen
         throw new Error(result.error);
       }
     },
+    onError: (err) => {
+      // Show error toast
+      toast.error(err instanceof Error ? err.message : 'Failed to restore promos');
+    },
     onSuccess: () => {
       // Invalidate hidden promo count
       queryClient.invalidateQueries({ queryKey: ["hidden-promos", setId] });
@@ -263,6 +278,8 @@ export function useResetHiddenPromos(setId: string, preferences: TrackerPreferen
         queryKey: setKeys.progress(),
         refetchType: 'none'
       });
+      // Show success toast
+      toast.success('All promos restored successfully');
     },
   });
 }
@@ -328,7 +345,7 @@ export function useRestorePromo(setId: string, preferences: TrackerPreferences) 
 
       return { previousHiddenPromos, previousCards, promoId };
     },
-    onError: (_err, _promoId, context) => {
+    onError: (err, _promoId, context) => {
       // Rollback to previous state on error
       if (context?.previousHiddenPromos) {
         queryClient.setQueryData(hiddenPromosQueryKey, context.previousHiddenPromos);
@@ -336,6 +353,8 @@ export function useRestorePromo(setId: string, preferences: TrackerPreferences) 
       if (context?.previousCards) {
         queryClient.setQueryData(queryKey, context.previousCards);
       }
+      // Show error toast
+      toast.error(err instanceof Error ? err.message : 'Failed to restore promo');
     },
     onSuccess: () => {
       // Invalidate hidden promo count
@@ -347,6 +366,8 @@ export function useRestorePromo(setId: string, preferences: TrackerPreferences) 
         queryKey: setKeys.progress(),
         refetchType: 'none'
       });
+      // Show success toast
+      toast.success('Promo restored successfully');
     },
   });
 }
