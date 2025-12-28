@@ -790,14 +790,34 @@ Use this project ID for all Supabase MCP operations: migrations, SQL execution, 
 
 ## Core Features
 
-### 1. Card Database Browser
+### 1. Card Database Browser (FULLY IMPLEMENTED)
 
 **Key Clarification**: Browse Cards displays unique cards only - no variants. This keeps card counts accurate and UI clean. Variants are only relevant in Master Set Tracker.
 
+**Core Features:**
 - Displays **unique cards only** (NO variants in browse view)
 - Shared filter system: text search, set, era, type, rarity, generation, supertype, premium/legendary/mythical toggles
-- Responsive grid with infinite scroll and virtualization
-- Card detail modal with zoom, metadata, and actions
+- Virtual scrolling with react-window for performance
+- Responsive grid and list view modes with toggle
+- Card detail modal with keyboard navigation (arrow keys, Escape)
+- URL synchronization - all filter states are shareable via URL params
+- Sticky header matching Tracker design pattern
+
+**Key Components:**
+- `BrowseHeader` - Sticky header with navigation and card counts
+- `FilterPanel` - Comprehensive filter UI (desktop sidebar, mobile drawer)
+- `FilterBar` - Active filter chips with remove buttons
+- `SortDropdown` - Sort by name, number, rarity, release date
+- `ViewModeToggle` - Grid/list view switcher
+- `CardGrid` - Virtualized grid with responsive columns
+- `CardListView` - Compact list view for browsing
+- `BrowseCardModal` - Full card details with navigation
+
+**Design System:**
+- Uses unified color scheme: **indigo** for primary actions/active states
+- Matches Master Set Tracker visual language
+- Magic UI components: BlurFade animations, responsive layouts
+- Consistent spacing, typography, and button patterns
 
 ### 2. Master Set Tracker (FULLY IMPLEMENTED)
 
@@ -983,16 +1003,16 @@ custom_images: id, user_id, storage_path, original_filename, file_size,
 
 ## Development Phases (21 weeks)
 
-| Phase | Weeks | Focus | Key Deliverables |
-|-------|-------|-------|------------------|
-| 0 | 1-2 | Foundation | Next.js, Supabase, Auth, CI/CD, Data pipeline |
-| 1 | 3-4 | Card Browser | Grid view, shared filters, search, card modal |
-| 2 | 5-7 | Master Set Tracker | Visual binder, preferences, progress, variants |
-| 3 | 8-11 | Unified Builder Core | Canvas editor, card picker, drag-drop, Michi features (slot merging, custom upload) |
-| 4 | 12-14 | ChromaDex Integration | Color extraction pipeline, generation algorithm, in-canvas UI |
-| 5 | 15-16 | Export/Import | CSV, PNG, PDF generation, TCGPlayer/Collectr parsers |
-| 6 | 17-19 | Community | Gallery, sharing, templates library, social export |
-| 7 | 20-21 | Launch | Stripe, feature gating, ads, launch prep |
+| Phase | Weeks | Focus | Status | Key Deliverables |
+|-------|-------|-------|--------|------------------|
+| 0 | 1-2 | Foundation | ✅ COMPLETE | Next.js, Supabase, Auth, CI/CD, Data pipeline (20 sets, 4,108+ cards, 6,514+ variants) |
+| 1 | 3-4 | Card Browser | ✅ COMPLETE | Grid/list views, virtual scrolling, shared filters, search, card modal, URL sync, design system unification |
+| 2 | 5-7 | Master Set Tracker | ✅ COMPLETE | Visual binder, preferences, progress, variants, bulk actions, hidden promos, optimistic updates |
+| 3 | 8-11 | Unified Builder Core | 🔄 IN PROGRESS | Canvas editor, card picker, drag-drop, Michi features (slot merging, custom upload) |
+| 4 | 12-14 | ChromaDex Integration | ⏸️ PLANNED | Color extraction pipeline, generation algorithm, in-canvas UI |
+| 5 | 15-16 | Export/Import | ⏸️ PLANNED | CSV, PNG, PDF generation, TCGPlayer/Collectr parsers |
+| 6 | 17-19 | Community | ⏸️ PLANNED | Gallery, sharing, templates library, social export |
+| 7 | 20-21 | Launch | ⏸️ PLANNED | Stripe, feature gating, ads, launch prep |
 
 ## Git Conventions
 
@@ -1067,6 +1087,73 @@ chore: description         # Maintenance
 - `getComponents` - Core component implementations
 - `getDeviceMocks` - Device mockup implementations
 - `getAnimations` - Animation implementations
+
+## Design System
+
+**CRITICAL: Use unified color semantics across all features for visual consistency.**
+
+### Color Semantics (Master Set Tracker is Source of Truth)
+
+| Color | Usage | Tailwind Classes | Examples |
+|-------|-------|------------------|----------|
+| **Indigo** | Primary actions, active states, navigation highlights | `indigo-600`, `indigo-500`, `indigo-400`, `indigo-300` | Active buttons, selected filters, focus rings, navigation links |
+| **Green** | Success states, owned cards, positive actions | `green-600`, `green-500` | "Mark as Owned" button, success toasts, completion indicators |
+| **Emerald** | Active toggles, enabled states | `emerald-400`, `emerald-900` | Toggle switches, preference indicators |
+| **Red** | Danger, destructive actions, errors | `red-600`, `red-500`, `red-400` | Delete buttons, error messages, clear filters |
+| **Amber** | Warnings, promo badges, special items | `amber-500`, `amber-600` | Warning toasts, promotional card indicators |
+| **Zinc** | Backgrounds, borders, neutral elements | `zinc-900`, `zinc-800`, `zinc-700`, `zinc-600`, `zinc-500`, `zinc-400` | Backgrounds, borders, disabled states, secondary text |
+
+### Semantic Color Rules
+
+**DO:**
+- ✅ Use **indigo** for all primary actions and active states (NOT blue)
+- ✅ Use **green** for success feedback and owned/completed states
+- ✅ Use **red** for destructive actions and errors
+- ✅ Use **zinc** grays for neutral UI elements
+- ✅ Apply consistent focus rings: `focus:ring-2 focus:ring-indigo-500`
+
+**DON'T:**
+- ❌ Use blue for primary actions (outdated - replaced with indigo)
+- ❌ Mix color semantics (e.g., red for success, green for danger)
+- ❌ Use semantic colors for Pokémon type badges (Fire=orange, Water=blue, etc. are correct)
+
+### Typography Patterns
+
+**Consistent across all features:**
+- Page titles: `text-3xl md:text-4xl font-bold`
+- Section headers: `text-lg font-semibold`
+- Button text: `text-sm font-medium`
+- Metadata: `text-sm text-zinc-400`
+- Labels: `text-xs text-zinc-500`
+
+### Button Patterns
+
+**Standard Button:**
+```typescript
+className="px-4 py-2.5 text-sm font-medium rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 transition-colors"
+```
+
+**Primary Action Button:**
+```typescript
+className="px-4 py-2.5 text-sm font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+```
+
+**Success Button:**
+```typescript
+className="px-4 py-2.5 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors"
+```
+
+**Icon Button:**
+```typescript
+className="h-8 w-8 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+```
+
+### Spacing Patterns
+
+- Component padding: `px-4 py-3` (standard), `px-6 py-4` (large)
+- Section gaps: `space-y-4` (compact), `space-y-6` (standard), `space-y-8` (spacious)
+- Grid gaps: `gap-3` (tight), `gap-4` (standard), `gap-6` (loose)
+- Modal content: `space-y-5` for sections, `gap-5 sm:gap-6` for flex layouts
 
 ## Important Rules
 
